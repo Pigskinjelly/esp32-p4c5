@@ -1,6 +1,0 @@
-sh_day len=10086 | {"rc":0,"rt":17,"svr":177617934,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"code":"000001","market":1,"name":"上证指数","decimal":2,"dktotal":8768,"preKPrice":4146.63,"klines":["202
-sh_week len=10261 | {"rc":0,"rt":17,"svr":177617937,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"code":"000001","market":1,"name":"上证指数","decimal":2,"dktotal":8768,"preKPrice":3283.54,"klines":["202
-sh_month len=10291 | {"rc":0,"rt":17,"svr":177617934,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"code":"000001","market":1,"name":"上证指数","decimal":2,"dktotal":8768,"preKPrice":2333.41,"klines":["201
-aapl_day len=9903 | {"rc":0,"rt":17,"svr":177617939,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"code":"AAPL","market":105,"name":"苹果","decimal":3,"dktotal":10635,"preKPrice":259.48,"klines":["2026-
-aapl_month len=9652 | {"rc":0,"rt":17,"svr":177617938,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"code":"AAPL","market":105,"name":"苹果","decimal":3,"dktotal":10635,"preKPrice":2.81,"klines":["2011-12
-dji_day len=10807 | {"rc":0,"rt":17,"svr":177617933,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"code":"DJIA","market":100,"name":"道琼斯","decimal":2,"dktotal":9218,"preKPrice":47954.74,"klines":["202

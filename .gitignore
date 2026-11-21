@@ -1,6 +1,24 @@
-# Nested version-control metadata (not project content)
+# 版本控制元数据（嵌套仓库不入库）
 **/.git/
-**/.git
 
-# 安全：网易云开放平台凭据截图（AppID/Secret/公私钥），禁止入库
-图片/网易云.png
+# 编译产物与临时文件
+**/build/
+*.log
+*.o
+*.pyc
+__pycache__/
+
+# 编辑器 / 系统文件
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 私人资料与过程产物（不对外发布）
+.workbuddy/
+图片/
+_t/
+_t*.py
+*.zip
+docs/ESP32-P4C5_开发交接文档.md
+docs/audit-2026-11-19/
+projects/*/docs/audit-2026-11-19/

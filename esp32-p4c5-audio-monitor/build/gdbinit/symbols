@@ -1,9 +1,0 @@
-
-
-# Load bootloader symbols
-set confirm off
-    add-symbol-file <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/bootloader.elf
-set confirm on
-
-# Load application symbols
-file <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/esp32-p4c5-audio-monitor.elf

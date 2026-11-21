@@ -1,48 +1,61 @@
-# ESP32-P4C5 开发与资料仓库
+# ESP32-P4C5 开发项目
 
-本仓库汇总 **OSPTEK ESP32-P4C5 核心板**（ESP32-P4 + ESP32-C5 双芯片）的完整开发资料与三个设备端工程：硬件规格、原理图、固件、示例工程、网络监控设备、审计报告与全部开发历程。目标是让拿到同款硬件的人能够**从零复刻**本项目。
+基于 **OSPTEK ESP32-P4C5 核心板**（ESP32-P4 + ESP32-C5 双芯片）的一组嵌入式工程与硬件资料。主工程是一台带 480×480 触摸屏的"手机式"设备，集成监控、相机、相册、音乐、股票行情、天气、设置等应用；另附早期整机 demo 与远程音频监控工程。仓库包含从零复刻所需的原理图、数据手册、固件、源码与构建说明。
 
-![桌面](images/generated/01-desktop.png)
+![桌面界面](assets/generated/01-desktop.png)
 
-> 上图为按项目实现绘制的界面示意图，非真机截图。更多界面示意见 `images/generated/`。
+> 界面示意图依据项目实现绘制，非真机截图。更多界面见 `assets/generated/`。
 
-## 目录一览
+## 仓库结构
 
-| 目录 / 文件 | 说明 |
+```
+.
+├── projects/                 三个 ESP-IDF 工程（源码 + 配置 + 依赖）
+│   ├── ipcam/                主工程：桌面系统 + RTSP 网络监控（当前 V2.38）
+│   ├── demo/                 早期整机 demo：相机预览 + 音频回环
+│   └── audio-monitor/        远程音频监控：麦克风采集 → Wi-Fi 推流
+├── hardware/                 硬件资料（原理图、数据手册、规格书 PDF）
+├── firmware/                 ESP32-C5 ESP-Hosted 合并固件
+├── docs/                     ARCHITECTURE / REPLICATION / 审计报告 / 构建补丁
+└── assets/generated/         界面示意图（PNG + SVG 源文件 + 生成脚本）
+```
+
+## 硬件基线
+
+| 部件 | 型号 |
 |---|---|
-| `esp32-p4c5-ipcam/` | **主工程**：手机式桌面系统（8 个 App）+ 网络监控（RTSP/H.264）、相机、音乐、股票、导航等，当前工作版本 **V2.38** |
-| `esp32-p4c5-demo/` | 早期整机 demo：相机预览到屏 + 麦克风→喇叭音频回环 |
-| `esp32-p4c5-audio-monitor/` | 无屏形态：板载麦克风采集 → Wi-Fi 推流，浏览器实时收听 |
-| `firmware/` | ESP32-C5 的 ESP-Hosted 合并固件（`ESP32-C5_ESP-Hosted_v2.12.9_merged_0x0.bin`，烧至 C5 的 `0x0`） |
-| `docs/` | 硬件/架构说明、审计报告、**完整开发交接文档（已脱敏）**、**复刻指南** |
-| `images/generated/` | 界面示意图（PNG + SVG 源文件 + `_gen.js` 生成脚本） |
-| 根目录 `*.pdf` | 核心板使用指南、模块原理图、数据手册、摄像头/天线/喇叭规格书 |
+| 核心板 | ESP32-P4 rev v3.2 + ESP32-C5HF4 rev v1.2（88Pin） |
+| 主控 | P4 双核 RISC-V 400MHz，16MB Flash + 32MB PSRAM |
+| 无线 | C5：Wi-Fi 6 双频 + BLE5，经 SDIO 4-bit 连接 P4 |
+| 显示屏 | YDP395BT008-V1，3.95″ 480×480 MIPI-DSI，ST7123 触摸 |
+| 摄像头 | SC2336 2MP MIPI-CSI |
+| 音频 | ES8311 codec + NS4150B 功放 + 板载麦克风 |
+| 存储 | TF 卡（SDMMC）+ Flash `storage` 分区 |
 
-## 快速开始（复刻路线）
+完整 GPIO 分配、P4↔C5 SDIO 引脚、启动配置见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) 与 [`docs/REPLICATION.md`](docs/REPLICATION.md)。
 
-1. **准备硬件**：OSPTEK ESP32-P4C5-Module V1.5 核心板 + 3.95″ 480×480 MIPI 屏（YDP395BT008-V1 / ST7123 触摸）+ SC2336 摄像头 + ES8311 音频 + TF 卡。完整 GPIO 表与 P4↔C5 SDIO 引脚见 [`docs/ESP32-P4C5_开发交接文档.md`](docs/ESP32-P4C5_开发交接文档.md) §1。
-2. **搭构建环境**：ESP-IDF **v5.5.5**，Python 3.11 venv。注意 `ESP_IDF_VERSION` 必须设为 `5.5`（不是 5.5.5），且构建**必须从 bash 发起**。详见 [`docs/REPLICATION.md`](docs/REPLICATION.md)。
-3. **打本机补丁**：原开发机在 ESP-IDF 工具链与组件上打了 10 处补丁，其中多处与本机文档透明加密驱动（DLP）相关。**换机器必须按 `docs/REPLICATION.md` 与 `docs/patches/` 重新处理**，否则会出现各种奇怪的构建失败。
-4. **烧录 C5 固件**：拨码拨到 C5，把 `firmware/` 下的合并固件烧到 `0x0`；P4 侧 `esp_hosted` 版本必须与之严格对齐。
-5. **构建并烧录 P4**：以 `esp32-p4c5-ipcam/` 为例：
+## 快速开始
+
+1. **环境**：ESP-IDF v5.5.5，Python 3.11 虚拟环境。构建前设置 `ESP_IDF_VERSION=5.5`（major.minor），并从 bash 发起构建——详见 [`docs/REPLICATION.md`](docs/REPLICATION.md)。
+2. **烧录 C5 固件**：拨码拨到 C5，将 `firmware/` 中的合并固件烧写到 `0x0`。
+3. **构建 P4 工程**（以主工程为例）：
    ```bash
-   cd esp32-p4c5-ipcam
-   bash build.sh            # 增量构建
-   bash flash.sh <串口>     # 拨码拨到 P4，如 bash flash.sh COM19
+   cd projects/ipcam
+   bash build.sh              # 编译
+   bash flash.sh <串口>       # 拨码拨到 P4 后烧录，如 bash flash.sh COM3
    ```
-   其余两个工程的用法见各自 `README.md`。
+   另外两个工程的使用说明见其目录内 `README.md`。
+4. **复刻注意**：原开发环境对一些 ESP-IDF 工具脚本打了补丁（见 `docs/patches/`），换机器构建前请按 `docs/REPLICATION.md` 处理。
 
-## 版本与状态
+## 文档
 
-- `esp32-p4c5-ipcam`：当前工作版本 **V2.38**（交易 App 五项 + SDIO 随机重启根治 + 导航 App 冻结归档），已编译、已烧录、助手自测通过；**用户逐项真机验收仍缺**。历史上最后一版"可交付/可回退"固件信息见交接文档文首版本块。
-- 详细到每一轮需求、每次构建、每个坑的**完整开发历程**：见 [`docs/ESP32-P4C5_开发交接文档.md`](docs/ESP32-P4C5_开发交接文档.md)（2.1MB 全文存档）。
+| 文档 | 内容 |
+|---|---|
+| `docs/ARCHITECTURE.md` | 硬件基线、分层架构、数据流、GPIO 总表、风险项 |
+| `docs/REPLICATION.md` | 构建环境、关键配置、工具链补丁、故障排查 |
+| `docs/patches/` | `ldgen.py` 等构建工具补丁说明与文件 |
+| `docs/ESP32-P4C5_审计与稳定性报告_2026-11-19.md` | 代码审计与稳定性分析（历史快照） |
 
-## 安全与隐私说明
+## 许可
 
-- 本文档已脱敏：内网 IP、本机用户名/绝对路径、WiFi 名称、会话标识均已替换为占位符。
-- 原 `图片/网易云.png` 含网易云开放平台 **AppID / AppSecret / Public Key / Private Key**，**不随仓库发布**，并已从 git 历史中清除。若需接入在线曲库，请自行到平台申请凭据并妥善保管；历史上它曾短暂出现在公开仓库中，如这些凭据仍有效请立即轮换。
-- 代码中 Wi-Fi 凭据默认为空/占位符，请在自己的配置中填写，勿提交真实口令。
-
-## 许可与致谢
-
-硬件资料版权归原厂商（OSPTEK / 乐鑫）所有；第三方组件（`managed_components/`）遵循各自许可证。本项目代码按仓库现有授权使用。
+硬件资料版权归原厂商（OSPTEK / 乐鑫）所有；`managed_components/` 中的第三方组件遵循各自许可证。

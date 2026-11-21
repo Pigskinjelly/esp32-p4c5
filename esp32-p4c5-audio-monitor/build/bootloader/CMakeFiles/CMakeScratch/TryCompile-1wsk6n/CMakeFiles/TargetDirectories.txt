@@ -1,3 +1,0 @@
-<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-1wsk6n/CMakeFiles/cmTC_4812a.dir
-<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-1wsk6n/CMakeFiles/edit_cache.dir
-<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-1wsk6n/CMakeFiles/rebuild_cache.dir

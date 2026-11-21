@@ -1,0 +1,9 @@
+# ESP-IDF 构建产物
+build/
+sdkconfig.old
+
+# 编译日志
+*.log
+
+# 说明：sdkconfig、dependencies.lock、managed_components 需入库，
+# 以保证"同源码 → 同 bin"复现（组件内有本地补丁，重新拉取会覆盖）。
