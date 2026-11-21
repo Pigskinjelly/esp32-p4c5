@@ -1,0 +1,3 @@
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-lxh25d/CMakeFiles/cmTC_f5677.dir
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-lxh25d/CMakeFiles/edit_cache.dir
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-lxh25d/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,1217 @@
+/* ============================================================================
+ * 【已冻结 / FROZEN】导航地图 App
+ *
+ * 冻结日期：2026-11-20    冻结时版本：v2.34-audit（git 6a2002f 之后）
+ * 原因：用户决定终止该功能的跟进与优化（定位精度依赖外部服务、离线示意地图
+ *       与真实导航差距大，投入产出不成正比）。
+ *
+ * 本文件已从构建中移除（main/CMakeLists.txt 不再包含），并在 App 注册表
+ * （main/ui_apps.c）中注销。此份为**只读存档**，请勿再修改、勿重新加入编译。
+ *
+ * 恢复方法（仅供将来参考）：
+ *   1. 把本文件复制回 main/ui_app_map.c（去掉 .frozen 后缀）
+ *   2. main/CMakeLists.txt 的 srcs 里加回 "ui_app_map.c"
+ *   3. main/ui_apps.c 里恢复 extern 声明与 ui_shell_register_app(&ui_app_map)
+ *   4. 依赖：wifi_mgr（IP 定位）、ui_theme、lvgl 画布（PSRAM）
+ *   存档校验：sha256 见同目录 README.md
+ * ========================================================================== */
+
+/*
+ * 导航 / 地图 App —— 简约动画地图
+ *
+ * 设计取向（2026-11-20 用户指定）：
+ *   不要真实瓦片，只要示意图那种简约路网；地图要"活"（有动画）。
+ *
+ * 实现：
+ *   - 不联网取图：按世界坐标程序化生成路网（横竖街道 + 两条斜向高速），
+ *     可拖动平移、+/- 缩放；抖动由格点 hash 决定（平移时不会闪）。
+ *   - 底图/路线/标记画进 base 缓冲；每帧 memcpy 到显示缓冲，再叠加动画
+ *     （路线上移动的光点、终点呼吸光圈、我的位置呼吸环）。
+ *   - 我的位置固定屏幕中心（本板无 GPS，位置由 IP 定位 / 校准 / 蓝牙写入）。
+ *   - 点「定位 / 导航」→ 弹窗输入起点与终点（地点名或"纬度,经度"）→
+ *     Nominatim 地理编码 + OSRM 算里程时长 → 画正交折线路线。
+ */
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <ctype.h>
+
+#include "esp_log.h"
+#include "esp_heap_caps.h"
+#include "esp_http_client.h"
+#include "esp_crt_bundle.h"
+#include "esp_timer.h"
+#include "nvs.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/idf_additions.h"
+#include "freertos/semphr.h"
+
+#include "lvgl.h"
+#include "ui_shell.h"
+#include "esp_lvgl_port.h"
+#include "ui_theme.h"
+#include "wifi_mgr.h"
+#include "bt_mgr.h"
+
+static const char *TAG = "ui_map";
+
+#define MAP_W       480
+#define MAP_H       480
+#define ZOOM_MIN    3
+#define ZOOM_MAX    18
+#define CELL_BASE   110.0          /* zoom=11 时一个街区的像素 */
+
+#define RGB565(r, g, b) ((uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3)))
+
+/* 配色（与设计稿一致） */
+#define C_MAP_BG    RGB565(0x10, 0x18, 0x27)
+#define C_MAP_ROAD  RGB565(0x2A, 0x37, 0x50)
+#define C_MAP_MAIN  RGB565(0x3A, 0x4A, 0x6A)
+#define C_ROUTE     RGB565(0x3B, 0x82, 0xF6)
+#define C_ME        RGB565(0x2D, 0xD4, 0xBF)
+#define C_PIN       RGB565(0xF8, 0x71, 0x71)
+
+/* ================= 状态 ================= */
+static double s_lat = 22.5431;      /* 深圳，未定位时的占位 */
+static double s_lon = 114.0579;
+static bool   s_have_fix;
+static char   s_place[32] = "--";
+static int    s_zoom = 11;
+static bool   s_ble_fix;
+static bool   s_manual_fix;
+
+/* 视窗：屏幕左上角对应的世界坐标（像素） */
+static double s_pan_x, s_pan_y;
+static double s_cell = CELL_BASE;
+
+/* 目的地（世界坐标）与名称 */
+static double s_dest_wx, s_dest_wy;
+static bool   s_dest_set;
+static char   s_dest_name[40] = "";
+static char   s_start_name[40] = "";
+
+static int    s_route_dist_m, s_route_dur_s;
+static volatile int  s_route_state;     /* 0 无 1 成功 2 找不到地点 */
+static volatile bool s_nav_on;
+static volatile bool s_geo_warn;     /* 地点没解析出来（只给示意路线） */
+
+/* 网络任务 */
+static SemaphoreHandle_t s_sem;
+static volatile bool s_need_fix;
+static volatile bool s_need_route;
+static char   s_req_start[40], s_req_end[40];
+
+/* 画布 */
+static uint8_t *s_base_buf;         /* 静态层 */
+static uint8_t *s_view_buf;         /* 显示层 = 静态层 + 动画 */
+static lv_image_dsc_t s_view_dsc;
+static lv_obj_t *s_img;
+static lv_obj_t *s_lbl_info;
+static volatile bool s_map_dirty;
+
+/* 动画 */
+static lv_timer_t *s_anim;
+static float s_anim_phase;
+
+/* UI */
+static lv_obj_t *s_nav_ov;
+static lv_obj_t *s_calib_ov;
+static lv_obj_t *s_calib_in;
+static char s_calib_inp[40];
+
+static lv_obj_t *s_nav_start_lbl;
+static lv_obj_t *s_nav_end_lbl;
+static char s_nav_start_buf[40];
+static char s_nav_end_buf[40];
+static int  s_nav_active;           /* 0 起点 1 终点 */
+
+/* ================= 手动校准（NVS） ================= */
+static bool load_calib(double *lat, double *lon)
+{
+    nvs_handle_t h;
+    int32_t a = 0, b = 0;
+    bool ok = false;
+    if (nvs_open("sys", NVS_READONLY, &h) == ESP_OK) {
+        if (nvs_get_i32(h, "map_lat", &a) == ESP_OK && nvs_get_i32(h, "map_lon", &b) == ESP_OK) {
+            *lat = a / 1e6;
+            *lon = b / 1e6;
+            ok = true;
+        }
+        nvs_close(h);
+    }
+    return ok;
+}
+
+static void save_calib(double lat, double lon)
+{
+    nvs_handle_t h;
+    if (nvs_open("sys", NVS_READWRITE, &h) == ESP_OK) {
+        nvs_set_i32(h, "map_lat", (int32_t)(lat * 1e6));
+        nvs_set_i32(h, "map_lon", (int32_t)(lon * 1e6));
+        nvs_commit(h);
+        nvs_close(h);
+    }
+}
+
+/* ================= 绘制基础 ================= */
+static inline void px(uint16_t *buf, int x, int y, uint16_t c)
+{
+    if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) {
+        return;
+    }
+    buf[(size_t)y * MAP_W + x] = c;
+}
+
+static void rect_fill(uint16_t *buf, int x, int y, int w, int h, uint16_t c)
+{
+    if (x < 0) {
+        w += x;
+        x = 0;
+    }
+    if (y < 0) {
+        h += y;
+        y = 0;
+    }
+    if (x + w > MAP_W) {
+        w = MAP_W - x;
+    }
+    if (y + h > MAP_H) {
+        h = MAP_H - y;
+    }
+    if (w <= 0 || h <= 0) {
+        return;
+    }
+    for (int r = 0; r < h; r++) {
+        uint16_t *row = buf + (size_t)(y + r) * MAP_W + x;
+        for (int i = 0; i < w; i++) {
+            row[i] = c;
+        }
+    }
+}
+
+static void line_w(uint16_t *buf, int x0, int y0, int x1, int y1, int w, uint16_t c)
+{
+    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy;
+    int h = w / 2;
+    for (;;) {
+        rect_fill(buf, x0 - h, y0 - h, w, w, c);
+        if (x0 == x1 && y0 == y1) {
+            break;
+        }
+        int e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+}
+
+static void circle_fill(uint16_t *buf, int cx, int cy, int r, uint16_t c)
+{
+    for (int y = -r; y <= r; y++) {
+        for (int x = -r; x <= r; x++) {
+            if (x * x + y * y <= r * r) {
+                px(buf, cx + x, cy + y, c);
+            }
+        }
+    }
+}
+
+static void ring(uint16_t *buf, int cx, int cy, int r_in, int r_out, uint16_t c)
+{
+    int r2i = r_in * r_in, r2o = r_out * r_out;
+    for (int y = -r_out; y <= r_out; y++) {
+        for (int x = -r_out; x <= r_out; x++) {
+            int d = x * x + y * y;
+            if (d >= r2i && d <= r2o) {
+                px(buf, cx + x, cy + y, c);
+            }
+        }
+    }
+}
+
+static inline int wx2sx(double wx) { return (int)(wx - s_pan_x); }
+static inline int wy2sy(double wy) { return (int)(wy - s_pan_y); }
+
+/* 格点抖动：同一个 i 永远一样，平移时不闪 */
+static uint32_t hash32(uint32_t x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352dU;
+    x ^= x >> 15;
+    x *= 0x846ca68bU;
+    x ^= x >> 16;
+    return x;
+}
+
+static void draw_roads(uint16_t *buf)
+{
+    double cell = s_cell;
+    if (cell < 24) {
+        cell = 24;
+    }
+    int i0 = (int)floor(s_pan_x / cell) - 1;
+    int i1 = (int)floor((s_pan_x + MAP_W) / cell) + 1;
+    for (int i = i0; i <= i1; i++) {
+        int jitter = (int)(hash32((uint32_t)i ^ 0x9E3779B9u) % 17) - 8;
+        int x = (int)(i * cell - s_pan_x) + jitter;
+        bool main = ((i & 3) == 0);
+        line_w(buf, x, 0, x, MAP_H - 1, main ? 9 : 5, main ? C_MAP_MAIN : C_MAP_ROAD);
+    }
+    int j0 = (int)floor(s_pan_y / cell) - 1;
+    int j1 = (int)floor((s_pan_y + MAP_H) / cell) + 1;
+    for (int j = j0; j <= j1; j++) {
+        int jitter = (int)(hash32((uint32_t)j ^ 0x85EBCA6Bu) % 17) - 8;
+        int y = (int)(j * cell - s_pan_y) + jitter;
+        bool main = ((j & 3) == 2);
+        line_w(buf, 0, y, MAP_W - 1, y, main ? 9 : 5, main ? C_MAP_MAIN : C_MAP_ROAD);
+    }
+    /* 两条斜向主干道（世界坐标固定，平移/缩放跟着走） */
+    for (int k = -2; k <= 2; k++) {
+        double base = (double)k * cell * 3.0;
+        int x0 = wx2sx(base) - 200;
+        int y0 = wy2sy(base) - 200;
+        line_w(buf, x0, y0, x0 + MAP_W + 400, y0 + (MAP_H + 400) * 2 / 5, 9, C_MAP_MAIN);
+        int x1 = wx2sx(base) + 260;
+        line_w(buf, x1, y0, x1 - (MAP_W + 400), y0 + (MAP_H + 400) * 2 / 5, 5, C_MAP_ROAD);
+    }
+}
+
+/* 路线折线（屏幕坐标，正交梯级） */
+static int route_points(int *xs, int *ys, int max)
+{
+    int cx = MAP_W / 2, cy = MAP_H / 2;
+    int dx = wx2sx(s_dest_wx);
+    int dy = wy2sy(s_dest_wy);
+    if (max < 6) {
+        return 0;
+    }
+    int vdir = (dy < cy) ? -1 : 1;
+    int span = abs(dy - cy);
+    int h1 = span / 3 + 16;
+    int h2 = span / 4 + 10;
+    int mx = cx + (dx - cx) / 2;
+
+    xs[0] = cx;  ys[0] = cy;
+    xs[1] = cx;  ys[1] = cy + vdir * h1;
+    xs[2] = mx;  ys[2] = cy + vdir * h1;
+    xs[3] = mx;  ys[3] = dy - vdir * h2;
+    xs[4] = dx;  ys[4] = dy - vdir * h2;
+    xs[5] = dx;  ys[5] = dy;
+    return 6;
+}
+
+static void draw_route(uint16_t *buf)
+{
+    int xs[8], ys[8];
+    int n = route_points(xs, ys, 8);
+    for (int i = 0; i + 1 < n; i++) {
+        line_w(buf, xs[i], ys[i], xs[i + 1], ys[i + 1], 6, C_ROUTE);
+    }
+}
+
+/* 终点 pin：圆头 + 尖尾 + 白点 */
+static void draw_pin(uint16_t *buf, int x, int y)
+{
+    circle_fill(buf, x, y - 9, 9, C_PIN);
+    for (int oy = -5; oy <= 3; oy++) {
+        int half = (oy < 0) ? (8 + oy) : (8 - oy * 2);
+        if (half < 0) {
+            half = 0;
+        }
+        rect_fill(buf, x - half, y + oy, half * 2 + 1, 1, C_PIN);
+    }
+    circle_fill(buf, x, y - 9, 3, 0xFFFF);
+}
+
+/* 重建静态层 */
+static void map_rebuild(void)
+{
+    if (!s_base_buf || !s_view_buf) {
+        return;
+    }
+    uint16_t *b = (uint16_t *)s_base_buf;
+    rect_fill(b, 0, 0, MAP_W, MAP_H, C_MAP_BG);
+    draw_roads(b);
+
+    if (s_nav_on) {
+        draw_route(b);
+    }
+    if (s_dest_set) {
+        draw_pin(b, wx2sx(s_dest_wx), wy2sy(s_dest_wy));
+    }
+    /* 我的位置：白圈 + 青点 */
+    circle_fill(b, MAP_W / 2, MAP_H / 2, 10, 0xFFFF);
+    circle_fill(b, MAP_W / 2, MAP_H / 2, 6, C_ME);
+
+    s_map_dirty = true;
+}
+
+/* 沿折线取 t（0~1）处的点 */
+static void route_point_at(float t, int *ox, int *oy)
+{
+    int xs[8], ys[8];
+    int n = route_points(xs, ys, 8);
+    if (n < 2) {
+        *ox = MAP_W / 2;
+        *oy = MAP_H / 2;
+        return;
+    }
+    float seg[8];
+    float total = 0;
+    for (int i = 0; i + 1 < n; i++) {
+        float ddx = (float)(xs[i + 1] - xs[i]);
+        float ddy = (float)(ys[i + 1] - ys[i]);
+        seg[i] = sqrtf(ddx * ddx + ddy * ddy);
+        total += seg[i];
+    }
+    if (total <= 0.01f) {
+        *ox = xs[0];
+        *oy = ys[0];
+        return;
+    }
+    float want = t * total;
+    for (int i = 0; i + 1 < n; i++) {
+        if (want <= seg[i] || i == n - 2) {
+            float f = seg[i] > 0.01f ? want / seg[i] : 0;
+            if (f > 1) {
+                f = 1;
+            }
+            *ox = (int)(xs[i] + (xs[i + 1] - xs[i]) * f);
+            *oy = (int)(ys[i] + (ys[i + 1] - ys[i]) * f);
+            return;
+        }
+        want -= seg[i];
+    }
+}
+
+/* 每帧：静态层 + 动画 */
+static void map_frame(void)
+{
+    if (!s_base_buf || !s_view_buf || !s_img) {
+        return;
+    }
+    memcpy(s_view_buf, s_base_buf, (size_t)MAP_W * MAP_H * 2);
+    uint16_t *v = (uint16_t *)s_view_buf;
+
+    int cx = MAP_W / 2, cy = MAP_H / 2;
+
+    /* 我的位置呼吸环 */
+    float br = 13.0f + 4.0f * sinf(s_anim_phase * 6.28318f);
+    ring(v, cx, cy, (int)br, (int)br + 2, C_ME);
+
+    /* 路线上循环移动的光点 */
+    if (s_nav_on) {
+        int ppx, ppy;
+        route_point_at(fmodf(s_anim_phase, 1.0f), &ppx, &ppy);
+        circle_fill(v, ppx, ppy, 4, 0xFFFF);
+        circle_fill(v, ppx, ppy, 2, C_ROUTE);
+    }
+    /* 终点呼吸光圈 */
+    if (s_dest_set) {
+        int dx = wx2sx(s_dest_wx), dy = wy2sy(s_dest_wy);
+        float pr = 11.0f + 5.0f * sinf(s_anim_phase * 6.28318f);
+        ring(v, dx, dy - 9, (int)pr, (int)pr + 2, C_PIN);
+    }
+
+    lv_obj_invalidate(s_img);
+}
+
+static void anim_cb(lv_timer_t *t)
+{
+    (void)t;
+    s_anim_phase += 0.012f;
+    if (s_anim_phase > 1.0f) {
+        s_anim_phase -= 1.0f;
+    }
+    if (s_map_dirty) {
+        s_map_dirty = false;
+        map_rebuild();
+    }
+    if (s_img && !lv_obj_has_flag(s_img, LV_OBJ_FLAG_HIDDEN)) {
+        map_frame();
+    }
+}
+
+/* ================= 网络：IP 定位 / 地理编码 / 路线 ================= */
+static int http_get(const char *url, char *buf, int cap, bool https)
+{
+    esp_http_client_config_t cfg = {
+        .url = url,
+        .timeout_ms = 9000,
+        .buffer_size = 2048,
+        .user_agent = "ESP32-P4C5/2.34 (map demo)",
+    };
+    if (https) {
+        cfg.crt_bundle_attach = esp_crt_bundle_attach;
+    }
+    esp_http_client_handle_t cli = esp_http_client_init(&cfg);
+    if (!cli) {
+        return -1;
+    }
+    int total = -1;
+    if (esp_http_client_open(cli, 0) == ESP_OK) {
+        esp_http_client_fetch_headers(cli);
+        int status = esp_http_client_get_status_code(cli);
+        total = 0;
+        while (total < cap - 1) {
+            int r = esp_http_client_read(cli, buf + total, cap - 1 - total);
+            if (r <= 0) {
+                break;
+            }
+            total += r;
+        }
+        buf[total] = 0;
+        if (status != 200) {
+            ESP_LOGW(TAG, "GET %s -> http %d", url, status);
+            total = -1;
+        }
+    } else {
+        ESP_LOGW(TAG, "GET %s failed", url);
+    }
+    esp_http_client_close(cli);
+    esp_http_client_cleanup(cli);
+    return total;
+}
+
+/* ip-api.com：城市级定位 */
+static int fetch_ip_location(char *place, size_t place_len)
+{
+    char *buf = heap_caps_malloc(2048, MALLOC_CAP_SPIRAM);
+    if (!buf) {
+        return -1;
+    }
+    int n = http_get("http://ip-api.com/json/?lang=zh-CN&fields=status,lat,lon,city",
+                     buf, 2048, false);
+    int ok = -1;
+    if (n > 0 && !strstr(buf, "\"fail\"")) {
+        const char *la = strstr(buf, "\"lat\":");
+        const char *lo = strstr(buf, "\"lon\":");
+        const char *ci = strstr(buf, "\"city\":\"");
+        if (la && lo) {
+            double a = strtod(la + 6, NULL);
+            double b = strtod(lo + 6, NULL);
+            if (a != 0.0 && b != 0.0) {
+                s_lat = a;
+                s_lon = b;
+                if (ci) {
+                    const char *e = strchr(ci + 8, '"');
+                    if (e) {
+                        size_t len = (size_t)(e - (ci + 8));
+                        if (len >= place_len) {
+                            len = place_len - 1;
+                        }
+                        memcpy(place, ci + 8, len);
+                        place[len] = 0;
+                    }
+                }
+                ok = 0;
+            }
+        }
+    }
+    heap_caps_free(buf);
+    return ok;
+}
+
+/* 百分号编码（中文按 UTF-8 字节） */
+static void url_encode(const char *s, char *out, size_t cap)
+{
+    static const char *hex = "0123456789ABCDEF";
+    size_t o = 0;
+    for (const unsigned char *p = (const unsigned char *)s; *p && o + 4 < cap; p++) {
+        if (isalnum(*p) || *p == '-' || *p == '_' || *p == '.' || *p == '~') {
+            out[o++] = (char)*p;
+        } else {
+            out[o++] = '%';
+            out[o++] = hex[*p >> 4];
+            out[o++] = hex[*p & 0x0F];
+        }
+    }
+    out[o] = 0;
+}
+
+/* 地点名 → 经纬度；也接受 "纬度,经度" */
+static bool geocode(const char *q, double *lat, double *lon)
+{
+    double a = 0, b = 0;
+    if (sscanf(q, "%lf,%lf", &a, &b) == 2 && fabs(a) <= 90.0 && fabs(b) <= 180.0 &&
+        !(a == 0.0 && b == 0.0)) {
+        *lat = a;
+        *lon = b;
+        return true;
+    }
+    char enc[160];
+    url_encode(q, enc, sizeof(enc));
+    char url[360];
+    snprintf(url, sizeof(url),
+             "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1"
+             "&accept-language=zh&q=%s", enc);
+    char *buf = heap_caps_malloc(4096, MALLOC_CAP_SPIRAM);
+    if (!buf) {
+        return false;
+    }
+    int n = http_get(url, buf, 4096, true);
+    bool ok = false;
+    *lat = 0;
+    *lon = 0;
+    if (n > 0) {
+        const char *la = strstr(buf, "\"lat\":\"");
+        const char *lo = strstr(buf, "\"lon\":\"");
+        if (la && lo) {
+            a = strtod(la + 7, NULL);
+            b = strtod(lo + 7, NULL);
+            if (fabs(a) <= 90.0 && fabs(b) <= 180.0 && !(a == 0 && b == 0)) {
+                *lat = a;
+                *lon = b;
+                ok = true;
+            }
+        }
+    }
+    ESP_LOGI(TAG, "geocode \"%s\" -> %d (%.5f,%.5f)", q, ok ? 1 : 0, *lat, *lon);
+    heap_caps_free(buf);
+    return ok;
+}
+
+/* OSRM：只要里程/时长 */
+static bool fetch_route(double lat1, double lon1, double lat2, double lon2)
+{
+    char url[256];
+    snprintf(url, sizeof(url),
+             "http://router.project-osrm.org/route/v1/driving/%.6f,%.6f;%.6f,%.6f?overview=false",
+             lon1, lat1, lon2, lat2);
+    static char *rx;
+    if (!rx) {
+        rx = heap_caps_malloc(4096, MALLOC_CAP_SPIRAM);
+    }
+    if (!rx) {
+        return false;
+    }
+    int n = http_get(url, rx, 4096, false);
+    bool ok = false;
+    if (n > 0) {
+        const char *d = strstr(rx, "\"distance\":");
+        const char *t = strstr(rx, "\"duration\":");
+        if (d && t) {
+            s_route_dist_m = (int)strtod(d + 11, NULL);
+            s_route_dur_s = (int)strtod(t + 11, NULL);
+            ok = (s_route_dist_m > 0);
+        }
+    }
+    ESP_LOGI(TAG, "route -> %s (%d m / %d s)", ok ? "ok" : "fail",
+             s_route_dist_m, s_route_dur_s);
+    return ok;
+}
+
+static void map_task(void *arg)
+{
+    (void)arg;
+    while (1) {
+        if (xSemaphoreTake(s_sem, portMAX_DELAY) != pdTRUE) {
+            continue;
+        }
+        if (wifi_mgr_get_state() != WIFI_MGR_CONNECTED) {
+            s_need_fix = s_need_route = false;
+            continue;
+        }
+        if (s_need_fix) {
+            s_need_fix = false;
+            char place[32] = { 0 };
+            if (fetch_ip_location(place, sizeof(place)) == 0) {
+                s_have_fix = true;
+                if (place[0]) {
+                    strlcpy(s_place, place, sizeof(s_place));
+                }
+                ESP_LOGI(TAG, "ip location: %.5f,%.5f (%s)", s_lat, s_lon, s_place);
+            } else {
+                ESP_LOGW(TAG, "ip location failed");
+            }
+        }
+        if (s_need_route) {
+            s_need_route = false;
+            char start[40], end[40];
+            strlcpy(start, s_req_start, sizeof(start));
+            strlcpy(end, s_req_end, sizeof(end));
+
+            double slat = s_lat, slon = s_lon;
+            bool start_ok = false;
+            if (!start[0] || strcmp(start, "我的位置") == 0 || strcmp(start, "当前位置") == 0) {
+                start_ok = s_have_fix;
+            } else {
+                start_ok = geocode(start, &slat, &slon);
+            }
+            double dlat = 0, dlon = 0;
+            bool dest_ok = (end[0] != 0) && geocode(end, &dlat, &dlon);
+
+            s_route_dist_m = 0;
+            s_route_dur_s = 0;
+            if (dest_ok && start_ok) {
+                fetch_route(slat, slon, dlat, dlon);
+            }
+            /* 地图本身是示意的：解析不出来也照样画路线，只是没有里程 */
+            s_route_state = 1;
+            s_geo_warn = (!dest_ok || !start_ok);
+            s_dest_set = true;
+            s_nav_on = true;
+            s_map_dirty = true;
+            ESP_LOGI(TAG, "plan done: dest_ok=%d start_ok=%d dist=%d", (int)dest_ok,
+                     (int)start_ok, s_route_dist_m);
+        }
+    }
+}
+
+static void request(bool fix, bool route)
+{
+    if (fix) {
+        s_need_fix = true;
+    }
+    if (route) {
+        s_need_route = true;
+    }
+    if (s_sem) {
+        xSemaphoreGive(s_sem);
+    }
+}
+
+/* 蓝牙收到手机位置 */
+static void on_ble_loc(double lat, double lon)
+{
+    s_lat = lat;
+    s_lon = lon;
+    s_have_fix = true;
+    s_ble_fix = true;
+    strlcpy(s_place, "手机定位", sizeof(s_place));
+}
+
+/* ================= 弹窗：起点 / 终点 ================= */
+static void nav_field_paint(void)
+{
+    if (s_nav_start_lbl) {
+        lv_label_set_text(s_nav_start_lbl,
+                          s_nav_start_buf[0] ? ui_font_safe(s_nav_start_buf, &ui_cjk_16) : "我的位置");
+        lv_obj_set_style_text_color(s_nav_start_lbl,
+                                    col(s_nav_active == 0 ? 0xFFFFFF : 0x8A93A6), 0);
+    }
+    if (s_nav_end_lbl) {
+        lv_label_set_text(s_nav_end_lbl,
+                          s_nav_end_buf[0] ? ui_font_safe(s_nav_end_buf, &ui_cjk_16) : "输入目的地");
+        lv_obj_set_style_text_color(s_nav_end_lbl,
+                                    col(s_nav_active == 1 ? 0xFFFFFF : 0x8A93A6), 0);
+    }
+}
+
+static void nav_bind_active(void)
+{
+    if (s_nav_active == 0) {
+        ui_keypad_bind(s_nav_start_buf, sizeof(s_nav_start_buf), s_nav_start_lbl,
+                       nav_field_paint, NULL);
+    } else {
+        ui_keypad_bind(s_nav_end_buf, sizeof(s_nav_end_buf), s_nav_end_lbl,
+                       nav_field_paint, NULL);
+    }
+    nav_field_paint();
+}
+
+static void nav_field_cb(lv_event_t *e)
+{
+    s_nav_active = (int)(intptr_t)lv_event_get_user_data(e);
+    nav_bind_active();
+}
+
+static void nav_cancel_cb(lv_event_t *e)
+{
+    (void)e;
+    if (s_nav_ov) {
+        lv_obj_add_flag(s_nav_ov, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+static void nav_start_cb(lv_event_t *e)
+{
+    (void)e;
+    if (!s_nav_end_buf[0]) {
+        s_nav_active = 1;
+        nav_bind_active();
+        ui_shell_toast("请先输入目的地");
+        return;
+    }
+    if (s_nav_ov) {
+        lv_obj_add_flag(s_nav_ov, LV_OBJ_FLAG_HIDDEN);
+    }
+    strlcpy(s_req_start, s_nav_start_buf[0] ? s_nav_start_buf : "我的位置", sizeof(s_req_start));
+    strlcpy(s_req_end, s_nav_end_buf, sizeof(s_req_end));
+    strlcpy(s_start_name, s_req_start, sizeof(s_start_name));
+    strlcpy(s_dest_name, s_req_end, sizeof(s_dest_name));
+
+    s_route_state = 0;
+    s_nav_on = false;
+    /* 终点先放到屏幕右上方（世界坐标），路线形状基于它 */
+    s_dest_wx = s_pan_x + MAP_W / 2 + 120;
+    s_dest_wy = s_pan_y + MAP_H / 2 - 150;
+    s_dest_set = true;
+    s_map_dirty = true;
+    ui_shell_toast("正在规划路线…");
+    request(false, true);
+}
+
+static void nav_open_cb(void)
+{
+    if (!s_nav_ov) {
+        return;
+    }
+    s_nav_active = 1;
+    nav_bind_active();
+    lv_obj_remove_flag(s_nav_ov, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_nav_ov);
+}
+
+static void build_nav_modal(lv_obj_t *parent)
+{
+    s_nav_ov = lv_obj_create(parent);
+    lv_obj_set_size(s_nav_ov, 480, 480);
+    lv_obj_set_pos(s_nav_ov, 0, 0);
+    lv_obj_set_style_bg_color(s_nav_ov, col(0x000000), 0);
+    lv_obj_set_style_bg_opa(s_nav_ov, LV_OPA_70, 0);
+    lv_obj_set_style_border_width(s_nav_ov, 0, 0);
+    lv_obj_set_style_radius(s_nav_ov, 0, 0);
+    lv_obj_set_style_pad_all(s_nav_ov, 0, 0);
+    lv_obj_clear_flag(s_nav_ov, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_nav_ov, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_t *card = lv_obj_create(s_nav_ov);
+    lv_obj_set_size(card, 460, 250);
+    lv_obj_set_pos(card, 10, 8);
+    lv_obj_set_style_bg_color(card, col(0x12151E), 0);
+    lv_obj_set_style_border_width(card, 0, 0);
+    lv_obj_set_style_radius(card, 16, 0);
+    lv_obj_set_style_pad_all(card, 0, 0);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t *t = ui_label(card, "规划路线", &ui_cjk_16, C_TXT);
+    lv_obj_set_pos(t, 16, 10);
+
+    /* 起点 */
+    lv_obj_t *fs = lv_button_create(card);
+    lv_obj_set_size(fs, 428, 46);
+    lv_obj_set_pos(fs, 16, 40);
+    lv_obj_set_style_bg_color(fs, col(0x1B2130), 0);
+    lv_obj_set_style_radius(fs, 10, 0);
+    lv_obj_set_style_pad_all(fs, 0, 0);
+    lv_obj_add_event_cb(fs, nav_field_cb, LV_EVENT_CLICKED, (void *)(intptr_t)0);
+    lv_obj_t *sk = ui_label(fs, "起点", &ui_cjk_16, 0x5E6B85);
+    lv_obj_set_pos(sk, 12, 15);
+    s_nav_start_lbl = ui_label(fs, "我的位置", &ui_cjk_16, C_TXT);
+    lv_obj_set_pos(s_nav_start_lbl, 60, 15);
+    lv_obj_set_width(s_nav_start_lbl, 350);
+    lv_label_set_long_mode(s_nav_start_lbl, LV_LABEL_LONG_DOT);
+
+    /* 终点 */
+    lv_obj_t *fe = lv_button_create(card);
+    lv_obj_set_size(fe, 428, 46);
+    lv_obj_set_pos(fe, 16, 94);
+    lv_obj_set_style_bg_color(fe, col(0x1B2130), 0);
+    lv_obj_set_style_radius(fe, 10, 0);
+    lv_obj_set_style_pad_all(fe, 0, 0);
+    lv_obj_add_event_cb(fe, nav_field_cb, LV_EVENT_CLICKED, (void *)(intptr_t)1);
+    lv_obj_t *ek = ui_label(fe, "终点", &ui_cjk_16, 0x5E6B85);
+    lv_obj_set_pos(ek, 12, 15);
+    s_nav_end_lbl = ui_label(fe, "输入目的地", &ui_cjk_16, C_TXT);
+    lv_obj_set_pos(s_nav_end_lbl, 60, 15);
+    lv_obj_set_width(s_nav_end_lbl, 350);
+    lv_label_set_long_mode(s_nav_end_lbl, LV_LABEL_LONG_DOT);
+
+    lv_obj_t *hint = ui_label(card, "可输地点名，或 纬度,经度", &ui_cjk_16, 0x5E6B85);
+    lv_obj_set_pos(hint, 16, 148);
+
+    lv_obj_t *go = lv_button_create(card);
+    lv_obj_set_size(go, 206, 44);
+    lv_obj_set_pos(go, 16, 178);
+    lv_obj_set_style_radius(go, 12, 0);
+    lv_obj_set_style_bg_color(go, col(0x8B5CF6), 0);
+    lv_obj_add_event_cb(go, nav_start_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *gl = ui_label(go, "开始导航", &ui_cjk_16, C_TXT);
+    lv_obj_center(gl);
+
+    lv_obj_t *cx = lv_button_create(card);
+    lv_obj_set_size(cx, 206, 44);
+    lv_obj_set_pos(cx, 238, 178);
+    lv_obj_set_style_radius(cx, 12, 0);
+    lv_obj_set_style_bg_color(cx, col(0x222A3C), 0);
+    lv_obj_add_event_cb(cx, nav_cancel_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *cl = ui_label(cx, "取消", &ui_cjk_16, 0xC7D0E0);
+    lv_obj_center(cl);
+
+    ui_keypad_build_text(s_nav_ov, 264);
+}
+
+/* ================= 校准浮层 ================= */
+static void calib_cancel_cb(lv_event_t *e)
+{
+    (void)e;
+    lv_obj_add_flag(s_calib_ov, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void calib_ok_cb(lv_event_t *e)
+{
+    (void)e;
+    double lat = 0, lon = 0;
+    if (sscanf(s_calib_inp, "%lf,%lf", &lat, &lon) != 2) {
+        ui_shell_toast("请按 纬度,经度 格式输入");
+        return;
+    }
+    if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0 ||
+        (lat == 0.0 && lon == 0.0)) {
+        ui_shell_toast("经纬度不合法");
+        return;
+    }
+    s_lat = lat;
+    s_lon = lon;
+    s_have_fix = true;
+    s_manual_fix = true;
+    s_ble_fix = false;
+    strlcpy(s_place, "我的位置", sizeof(s_place));
+    save_calib(lat, lon);
+    lv_obj_add_flag(s_calib_ov, LV_OBJ_FLAG_HIDDEN);
+    ui_shell_toast("已按经纬度校准");
+}
+
+static void calib_open_cb(lv_event_t *e)
+{
+    (void)e;
+    s_calib_inp[0] = 0;
+    if (s_calib_in) {
+        lv_label_set_text(s_calib_in, "");
+    }
+    lv_obj_remove_flag(s_calib_ov, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(s_calib_ov);
+    ui_keypad_bind(s_calib_inp, sizeof(s_calib_inp), s_calib_in, NULL, NULL);
+}
+
+static void build_calib_modal(lv_obj_t *parent)
+{
+    s_calib_ov = lv_obj_create(parent);
+    lv_obj_set_size(s_calib_ov, 480, 480);
+    lv_obj_set_pos(s_calib_ov, 0, 0);
+    lv_obj_set_style_bg_color(s_calib_ov, col(0x0B0E14), 0);
+    lv_obj_set_style_bg_opa(s_calib_ov, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(s_calib_ov, 0, 0);
+    lv_obj_set_style_radius(s_calib_ov, 0, 0);
+    lv_obj_set_style_pad_all(s_calib_ov, 0, 0);
+    lv_obj_clear_flag(s_calib_ov, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_calib_ov, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_t *ct = ui_label(s_calib_ov, "输入经纬度校准位置", &ui_cjk_16, C_TXT);
+    lv_obj_set_pos(ct, 20, 14);
+    lv_obj_t *ck = ui_label(s_calib_ov, "格式：纬度,经度（例如 22.5455,114.0579）", NULL, 0x7B8CA6);
+    lv_obj_set_pos(ck, 20, 62);
+
+    s_calib_in = lv_label_create(s_calib_ov);
+    lv_obj_set_size(s_calib_in, 440, 46);
+    lv_obj_set_pos(s_calib_in, 20, 86);
+    lv_obj_set_style_bg_color(s_calib_in, col(0x141A24), 0);
+    lv_obj_set_style_bg_opa(s_calib_in, LV_OPA_COVER, 0);
+    lv_obj_set_style_text_font(s_calib_in, &ui_cjk_16, 0);
+    lv_obj_set_style_text_color(s_calib_in, col(C_TXT), 0);
+    lv_obj_set_style_pad_left(s_calib_in, 10, 0);
+    lv_obj_set_style_radius(s_calib_in, 10, 0);
+    lv_label_set_text(s_calib_in, "");
+
+    lv_obj_t *ok = lv_button_create(s_calib_ov);
+    lv_obj_set_size(ok, 140, 34);
+    lv_obj_set_pos(ok, 20, 146);
+    lv_obj_set_style_bg_color(ok, col(0x2E7D5B), 0);
+    lv_obj_add_event_cb(ok, calib_ok_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *okl = ui_label(ok, "确定", &ui_cjk_16, C_TXT);
+    lv_obj_center(okl);
+
+    lv_obj_t *cc = lv_button_create(s_calib_ov);
+    lv_obj_set_size(cc, 140, 34);
+    lv_obj_set_pos(cc, 320, 146);
+    lv_obj_set_style_bg_color(cc, col(0x39496B), 0);
+    lv_obj_add_event_cb(cc, calib_cancel_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *ccl = ui_label(cc, "取消", &ui_cjk_16, C_TXT);
+    lv_obj_center(ccl);
+
+    static const char *kp_rows[] = { "1234567890", ".,-+" };
+    ui_keypad_build(s_calib_ov, 196, kp_rows, 2);
+}
+
+/* ================= 交互 ================= */
+static void zoom_cb(lv_event_t *e)
+{
+    int d = (int)(intptr_t)lv_event_get_user_data(e);
+    int z = s_zoom + d;
+    if (z < ZOOM_MIN) z = ZOOM_MIN;
+    if (z > ZOOM_MAX) z = ZOOM_MAX;
+    if (z == s_zoom) {
+        return;
+    }
+    s_zoom = z;
+    s_cell = CELL_BASE * pow(2.0, (s_zoom - 11) / 2.0);
+    s_map_dirty = true;
+}
+
+static void locate_cb(lv_event_t *e)
+{
+    (void)e;
+    ui_shell_toast("正在定位…");
+    request(true, false);
+}
+
+/* 拖动地图 */
+static bool s_pan_ok;
+static int s_drag_dx, s_drag_dy;
+
+static void map_pressed_cb(lv_event_t *e)
+{
+    (void)e;
+    lv_indev_t *indev = lv_indev_active();
+    if (!indev) {
+        s_pan_ok = false;
+        return;
+    }
+    lv_point_t p;
+    lv_indev_get_point(indev, &p);
+    s_pan_ok = (p.x > 44 && p.x < MAP_W - 44 && p.y > 44 && p.y < MAP_H - 44);
+}
+
+static void map_released_cb(lv_event_t *e)
+{
+    (void)e;
+    if (s_drag_dx || s_drag_dy) {
+        s_drag_dx = s_drag_dy = 0;
+        lv_obj_set_pos(s_img, 0, 0);
+        s_map_dirty = true;
+    }
+}
+
+static void map_pressing_cb(lv_event_t *e)
+{
+    (void)e;
+    if (!s_pan_ok) {
+        return;
+    }
+    lv_indev_t *indev = lv_indev_active();
+    if (!indev) {
+        return;
+    }
+    lv_point_t v;
+    lv_indev_get_vect(indev, &v);
+    if (v.x == 0 && v.y == 0) {
+        return;
+    }
+    s_drag_dx -= v.x;
+    s_drag_dy -= v.y;
+    lv_obj_set_pos(s_img, s_drag_dx, s_drag_dy);
+    if (s_drag_dx >= 100 || s_drag_dx <= -100 || s_drag_dy >= 100 || s_drag_dy <= -100) {
+        s_pan_x -= s_drag_dx;      /* 画面往左移 = 视窗往右走 */
+        s_pan_y -= s_drag_dy;
+        s_drag_dx = s_drag_dy = 0;
+        lv_obj_set_pos(s_img, 0, 0);
+        s_map_dirty = true;
+    }
+}
+
+/* 左下按钮：点=规划路线（起点/终点弹窗），长按=重新定位 */
+static void nav_main_cb(lv_event_t *e)
+{
+    (void)e;
+    nav_open_cb();
+}
+
+static void nav_long_cb(lv_event_t *e)
+{
+    (void)e;
+    if (s_dest_set) {
+        s_dest_set = false;
+        s_nav_on = false;
+        s_route_state = 0;
+        s_route_dist_m = 0;
+        s_dest_name[0] = 0;
+        s_map_dirty = true;
+        ui_shell_toast("已清除路线");
+        return;
+    }
+    locate_cb(e);
+}
+
+static lv_obj_t *float_btn(lv_obj_t *parent, const char *txt, int x, int y, int w, int h,
+                           int radius, uint32_t bg, uint32_t fg, const lv_font_t *font,
+                           lv_event_cb_t cb, void *ud)
+{
+    lv_obj_t *b = lv_button_create(parent);
+    lv_obj_set_size(b, w, h);
+    lv_obj_set_pos(b, x, y);
+    lv_obj_set_style_radius(b, radius, 0);
+    lv_obj_set_style_bg_color(b, col(bg), 0);
+    lv_obj_set_style_bg_opa(b, 240, 0);
+    lv_obj_set_style_pad_all(b, 0, 0);
+    lv_obj_set_style_shadow_width(b, 0, 0);
+    if (cb) {
+        lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, ud);
+    }
+    lv_obj_t *l = ui_label(b, txt, font ? font : &ui_cjk_16, fg);
+    lv_obj_center(l);
+    return b;
+}
+
+static void reset_ui_refs(void)
+{
+    s_lbl_info = NULL;
+    s_img = NULL;
+    s_nav_ov = NULL;
+    s_nav_start_lbl = NULL;
+    s_nav_end_lbl = NULL;
+    s_calib_ov = NULL;
+    s_calib_in = NULL;
+}
+
+static void create(lv_obj_t *parent)
+{
+    reset_ui_refs();
+    if (!s_base_buf) {
+        s_base_buf = heap_caps_aligned_alloc(64, MAP_W * MAP_H * 2, MALLOC_CAP_SPIRAM);
+        s_view_buf = heap_caps_aligned_alloc(64, MAP_W * MAP_H * 2, MALLOC_CAP_SPIRAM);
+    }
+    if (!s_base_buf || !s_view_buf) {
+        ui_shell_toast("内存不足，地图无法启动");
+        return;
+    }
+    memset(s_view_buf, 0, MAP_W * MAP_H * 2);
+
+    memset(&s_view_dsc, 0, sizeof(s_view_dsc));
+    s_view_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    s_view_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    s_view_dsc.header.w = MAP_W;
+    s_view_dsc.header.h = MAP_H;
+    s_view_dsc.header.stride = MAP_W * 2;
+    s_view_dsc.data = s_view_buf;
+    s_view_dsc.data_size = MAP_W * MAP_H * 2;
+
+    s_img = lv_image_create(parent);
+    lv_image_set_src(s_img, &s_view_dsc);
+    lv_obj_set_pos(s_img, 0, 0);
+    lv_obj_add_flag(s_img, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_img, map_pressed_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(s_img, map_released_cb, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(s_img, map_pressing_cb, LV_EVENT_PRESSING, NULL);
+
+    /* 顶部胶囊：里程·时间 / 状态 */
+    lv_obj_t *pill = lv_obj_create(parent);
+    lv_obj_set_size(pill, 250, 36);
+    lv_obj_set_pos(pill, 8, 8);
+    lv_obj_set_style_bg_color(pill, col(0x0A0D14), 0);
+    lv_obj_set_style_bg_opa(pill, 235, 0);
+    lv_obj_set_style_border_width(pill, 0, 0);
+    lv_obj_set_style_radius(pill, 18, 0);
+    lv_obj_set_style_pad_all(pill, 0, 0);
+    lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
+    s_lbl_info = ui_label(pill, "定位中…", &ui_cjk_16, C_TXT);
+    lv_obj_align(s_lbl_info, LV_ALIGN_LEFT_MID, 14, 0);
+
+    lv_obj_t *crs = ui_label(parent, "简约地图 · 离线路网", &ui_cjk_16, 0x5E6B85);
+    lv_obj_align(crs, LV_ALIGN_TOP_RIGHT, -10, 16);
+
+    float_btn(parent, "+", 426, 104, 44, 44, 12, 0x111827, C_TXT, &lv_font_montserrat_24,
+              zoom_cb, (void *)(intptr_t)1);
+    float_btn(parent, "-", 426, 156, 44, 44, 12, 0x111827, C_TXT, &lv_font_montserrat_24,
+              zoom_cb, (void *)(intptr_t)-1);
+
+    lv_obj_t *navb = float_btn(parent, "定位 / 导航", 8, 428, 148, 42, 14,
+                               0x8B5CF6, C_TXT, &ui_cjk_16, NULL, NULL);
+    lv_obj_add_event_cb(navb, nav_main_cb, LV_EVENT_SHORT_CLICKED, NULL);
+    lv_obj_add_event_cb(navb, nav_long_cb, LV_EVENT_LONG_PRESSED, NULL);
+
+    lv_obj_t *cal = float_btn(parent, "校准", 382, 428, 90, 42, 14,
+                              0x111827, 0xE6EDF7, &ui_cjk_16, calib_open_cb, NULL);
+    lv_obj_set_style_border_width(cal, 1, 0);
+    lv_obj_set_style_border_color(cal, col(0x2A3550), 0);
+
+    build_nav_modal(parent);
+    build_calib_modal(parent);
+
+    if (!s_sem) {
+        s_sem = xSemaphoreCreateBinary();
+        bt_mgr_set_loc_cb(on_ble_loc);
+        BaseType_t ok = xTaskCreateWithCaps(map_task, "map_task", 16384, NULL, 3, NULL,
+                                           MALLOC_CAP_SPIRAM);
+        ESP_LOGI(TAG, "map task create: %d", (int)ok);
+    }
+
+    double clat, clon;
+    if (load_calib(&clat, &clon)) {
+        s_lat = clat;
+        s_lon = clon;
+        s_have_fix = true;
+        s_manual_fix = true;
+        strlcpy(s_place, "我的位置", sizeof(s_place));
+    } else {
+        request(true, false);
+    }
+    s_map_dirty = true;
+    map_rebuild();
+    map_frame();
+}
+
+static void tick(void)
+{
+    if (!s_lbl_info) {
+        return;
+    }
+    if (s_geo_warn) {
+        s_geo_warn = false;
+        ui_shell_toast(s_route_dist_m > 0 ? "已按示意路线显示" : "未取到地点，先按示意路线显示");
+    }
+    char buf[96];
+    if (s_route_state == 2) {
+        snprintf(buf, sizeof(buf), "没找到该地点");
+    } else if (s_nav_on && s_route_dist_m > 0) {
+        if (s_route_dist_m >= 1000) {
+            snprintf(buf, sizeof(buf), "%.1f 公里 · 约 %d 分钟",
+                     s_route_dist_m / 1000.0, (s_route_dur_s + 30) / 60);
+        } else {
+            snprintf(buf, sizeof(buf), "%d 米 · 约 %d 分钟",
+                     s_route_dist_m, (s_route_dur_s + 30) / 60);
+        }
+    } else if (s_nav_on) {
+        snprintf(buf, sizeof(buf), "路线已生成（示意）");
+    } else if (wifi_mgr_get_state() != WIFI_MGR_CONNECTED) {
+        snprintf(buf, sizeof(buf), "无网络 · z%d", s_zoom);
+    } else if (!s_have_fix) {
+        snprintf(buf, sizeof(buf), "定位中…");
+    } else {
+        snprintf(buf, sizeof(buf), "%s · z%d", s_place, s_zoom);
+    }
+    lv_label_set_text(s_lbl_info, buf);
+}
+
+static void on_show(void)
+{
+    ui_shell_set_tick_cb(tick);
+    if (!s_anim) {
+        s_anim = lv_timer_create(anim_cb, 70, NULL);
+    }
+    s_map_dirty = true;
+    if (!s_have_fix) {
+        request(true, false);
+    }
+}
+
+static void on_hide(void)
+{
+    ui_shell_set_tick_cb(NULL);
+    if (s_anim) {
+        lv_timer_delete(s_anim);
+        s_anim = NULL;
+    }
+}
+
+const ui_app_t ui_app_map = {
+    .name = "导航",
+    .symbol = LV_SYMBOL_GPS,
+    .color = 0x1B5E8C,
+    .create = create,
+    .on_show = on_show,
+    .on_hide = on_hide,
+};

@@ -1,0 +1,36 @@
+dependencies:
+  idf: ">=5.3"
+
+  esp_video:
+    version: "0.8.*"
+    public: true
+
+  espressif/esp_codec_dev:
+    version: "*"
+    public: true
+
+  # Wi-Fi 走 ESP32-C5 协处理器（SDIO），P4 侧经 esp_wifi_remote + esp_hosted 使用
+  espressif/esp_wifi_remote:
+    version: "^0.10.0"
+    public: true
+  espressif/esp_hosted:
+    version: "2.12.9"        # 与 C5 侧固件 ESP-Hosted v2.12.9 严格对齐
+    public: true
+
+  # 桌面系统 / 触摸：厂商示例即用 ST7123 触摸协议（SDA=7 SCL=8）
+  lvgl/lvgl:
+    version: "9.*"
+    public: true
+  espressif/esp_lvgl_port:
+    version: "2.*"
+    public: true
+  espressif/esp_lcd_touch:
+    version: "^1"
+    public: true
+  espressif/esp_lcd_touch_st7123:
+    version: "1.*"
+    public: true
+
+  # 相册：软件 JPEG 解码
+  espressif/esp_jpeg:
+    version: "*"

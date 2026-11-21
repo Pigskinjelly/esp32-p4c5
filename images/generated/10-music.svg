@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480"><defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0A1B33"/><stop offset="1" stop-color="#14406B"/></linearGradient>
+<linearGradient id="card" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#161A22"/><stop offset="1" stop-color="#1E2431"/></linearGradient>
+<linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C4DFF"/><stop offset="1" stop-color="#B06AB3"/></linearGradient>
+<linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C9C3F5"/></linearGradient>
+<radialGradient id="glow"><stop offset="0" stop-color="#7C4DFF" stop-opacity="0.35"/><stop offset="1" stop-color="#7C4DFF" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="480" height="480" fill="#0B0E14"/><circle cx="240" cy="180" r="230" fill="url(#glow)"/>
+<text x="20" y="34" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="18" fill="#FFFFFF" text-anchor="start" font-weight="bold">音乐</text><text x="460" y="34" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="12" fill="#7E8BA5" text-anchor="end" font-weight="normal">网络曲库</text>
+<circle cx="240" cy="152" r="80" fill="#1B2537" stroke="#3A4560" stroke-width="2"/>
+<circle cx="240" cy="152" r="58" fill="#2A1D46"/>
+<path d="M226 128 L226 168 Q226 180 214 180 Q206 180 206 173" stroke="#B79CFF" stroke-width="6" fill="none" stroke-linecap="round"/>
+<circle cx="212" cy="173" r="8" fill="#B79CFF"/><circle cx="256" cy="164" r="8" fill="#B79CFF"/>
+<text x="240" y="262" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="22" fill="#FFFFFF" text-anchor="middle" font-weight="bold">稻香</text><text x="240" y="286" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="13" fill="#8E9BB5" text-anchor="middle" font-weight="normal">周杰伦  ·  免费曲目</text>
+<text x="240" y="320" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="12" fill="#5D6B84" text-anchor="middle" font-weight="normal">回家的路上</text><text x="240" y="341" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="12" fill="#8E9BB5" text-anchor="middle" font-weight="normal">还记得你说家是唯一的城堡</text><text x="240" y="362" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="12" fill="#C7D1E5" text-anchor="middle" font-weight="normal">随着稻香河流继续奔跑</text><text x="240" y="383" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle" font-weight="normal">微微笑  小时候的梦我知道</text><text x="240" y="404" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="12" fill="#8E9BB5" text-anchor="middle" font-weight="normal">不要哭让萤火虫带着你逃跑</text>
+<text x="20" y="424" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="10" fill="#7E8BA5" text-anchor="start" font-weight="normal">1:24</text><text x="460" y="424" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="10" fill="#7E8BA5" text-anchor="end" font-weight="normal">3:32</text>
+<rect x="40" y="432" width="400" height="5" rx="3" fill="#26304A" /><rect x="40" y="432" width="168" height="5" rx="3" fill="#7C4DFF" />
+<text x="100" y="462" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="18" fill="#C7D1E5" text-anchor="middle" font-weight="normal">|‹</text><circle cx="240" cy="457" r="20" fill="url(#purple)"/><text x="240" y="464" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="19" fill="#FFFFFF" text-anchor="middle" font-weight="normal">></text><text x="380" y="462" font-family="'Microsoft YaHei','Segoe UI',sans-serif" font-size="18" fill="#C7D1E5" text-anchor="middle" font-weight="normal">>|</text>
+</svg>

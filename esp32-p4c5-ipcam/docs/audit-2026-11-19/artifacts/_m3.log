@@ -1,0 +1,324 @@
+ESP-ROM:esp32p4-eco7-20260109
+Build:Jan  9 2026
+rst:0x1 (POWERON),boot:0x30f (SPI_FAST_FLASH_BOOT)
+SPI mode:DIO, clock div:1
+load:0x4ffb60d0,len:0x1740
+load:0x4ffac2c0,len:0x1200
+load:0x4ffaefc0,len:0x3728
+entry 0x4ffac2ca
+I (26) boot: ESP-IDF v5.5.5-dirty 2nd stage bootloader
+I (26) boot: compile time Nov 12 2026 12:03:34
+I (26) boot: Multicore bootloader
+I (28) boot: chip revision: v3.2
+I (29) boot: efuse block revision: v1.2
+I (33) qio_mode: Enabling default flash chip QIO
+I (37) boot.esp32p4: SPI Speed      : 80MHz
+I (41) boot.esp32p4: SPI Mode       : QIO
+I (45) boot.esp32p4: SPI Flash Size : 16MB
+I (49) boot: Enabling RNG early entropy source...
+I (53) boot: Partition Table:
+I (56) boot: ## Label            Usage          Type ST Offset   Length
+I (62) boot:  0 nvs              WiFi data        01 02 0000a000 00005000
+I (69) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (75) boot:  2 factory          factory app      00 00 00010000 00800000
+I (82) boot:  3 storage          Unknown data     01 82 00810000 00700000
+I (89) boot: End of partition table
+I (92) esp_image: segment 0: paddr=00010020 vaddr=48190020 size=1922f0h (1647344) map
+I (331) esp_image: segment 1: paddr=001a2318 vaddr=30100000 size=001f4h (   500) load
+I (332) esp_image: segment 2: paddr=001a2514 vaddr=30100200 size=00048h (    72) load
+I (336) esp_image: segment 3: paddr=001a2564 vaddr=4ff20000 size=0dab4h ( 55988) load
+I (352) esp_image: segment 4: paddr=001b0020 vaddr=48000020 size=184fe0h (1593312) map
+I (577) esp_image: segment 5: paddr=00335008 vaddr=4ff2dab4 size=0ab14h ( 43796) load
+I (586) esp_image: segment 6: paddr=0033fb24 vaddr=4ff38600 size=04ea0h ( 20128) load
+I (591) esp_image: segment 7: paddr=003449cc vaddr=50108080 size=00020h (    32) load
+I (597) boot: Loaded app from partition at offset 0x10000
+I (597) boot: Disabling RNG early entropy source...
+I (613) hex_psram: vendor id    : 0x0d (AP)
+I (613) hex_psram: Latency      : 0x01 (Fixed)
+I (613) hex_psram: DriveStr.    : 0x00 (25 Ohm)
+I (614) hex_psram: dev id       : 0x03 (generation 4)
+I (618) hex_psram: density      : 0x07 (256 Mbit)
+I (623) hex_psram: good-die     : 0x06 (Pass)
+I (627) hex_psram: SRF          : 0x02 (Slow Refresh)
+I (632) hex_psram: BurstType    : 0x00 ( Wrap)
+I (636) hex_psram: BurstLen     : 0x03 (2048 Byte)
+I (640) hex_psram: BitMode      : 0x01 (X16 Mode)
+I (645) hex_psram: Readlatency  : 0x04 (14 cycles@Fixed)
+I (650) hex_psram: DriveStrength: 0x00 (1/1)
+I (654) MSPI Timing: Enter psram timing tuning
+I esp_psram: Found 32MB PSRAM device
+I esp_psram: Speed: 200MHz
+I (904) mmu_psram: .rodata xip on psram
+I (992) mmu_psram: .text xip on psram
+I (993) hex_psram: psram CS IO is dedicated
+I (993) cpu_start: Multicore app
+I (1752) esp_psram: SPI SRAM memory test OK
+I (1762) cpu_start: GPIO 38 and 37 are used as console UART I/O pins
+I (1762) cpu_start: Pro cpu start user code
+I (1762) cpu_start: cpu freq: 400000000 Hz
+I (1764) app_init: Application information:
+I (1768) app_init: Project name:     esp32-p4c5-demo
+I (1773) app_init: App version:      1
+I (1777) app_init: Compile time:     Nov 17 2026 19:52:43
+I (1782) app_init: ELF file SHA256:  4565b7b00...
+I (1786) app_init: ESP-IDF:          v5.5.5-dirty
+I (1791) efuse_init: Min chip rev:     v3.1
+I (1794) efuse_init: Max chip rev:     v3.99 
+I (1798) efuse_init: Chip rev:         v3.2
+I (1802) heap_init: Initializing. RAM available for dynamic allocation:
+I (1809) heap_init: At 4FF50490 len 0006AB30 (426 KiB): RETENT_RAM
+I (1815) heap_init: At 4FFBAFC0 len 00004BF0 (18 KiB): RAM
+I (1820) heap_init: At 501080A0 len 00007F60 (31 KiB): RTCRAM
+I (1825) heap_init: At 30100248 len 00001DB8 (7 KiB): SPM
+I (1831) esp_psram: Adding pool of 29504K of PSRAM memory to heap allocator
+I (1837) esp_psram: Adding pool of 44K of PSRAM memory gap generated due to end address alignment of irom to the heap allocator
+I (1848) esp_psram: Adding pool of 55K of PSRAM memory gap generated due to end address alignment of drom to the heap allocator
+W (1860) spi_flash: Detected boya flash chip but using generic driver. For optimal functionality, enable `SPI_FLASH_SUPPORT_BOYA_CHIP` in menuconfig
+I (1873) spi_flash: detected chip: generic
+I (1876) spi_flash: flash io: qio
+I (1879) host_init: ESP Hosted : Host chip_ip[18]
+I (1884) H_API: ESP-Hosted starting. Hosted_Tasks: prio:23, stack: 5120 RPC_task_stack: 5120
+I (1892) H_API: ** add_esp_wifi_remote_channels **
+I (1897) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (1903) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (1910) H_SDIO_DRV: sdio_data_to_rx_buf_task started
+I (1915) main_task: Started on CPU0
+I (1918) esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations
+I (1926) main_task: Calling app_main()
+I (1934) ipcam: shared I2C ready (SDA=7 SCL=8)
+I (2065) app_lcd: Install panel IO
+I (2065) app_lcd: Install LCD driver of st7102 (480x480)
+I (2065) st7102: LCD ID: 80 A0 FB
+I (2350) app_lcd: LCD ready: 480x480, 2 lanes, 620 Mbps
+I (2350) ST7123: Firmware version: 3(1.71.1.5), Max.X: 480, Max.Y: 480, Max.Touchs: 5
+I (2351) ST7123: Touch panel create success, version: 1.0.2
+I (2356) app_touch: touch ready (ST7123 @ I2C, SDA=7 SCL=8)
+I (2362) ui_shell: app switch mask = 0x10, bg mask = 0x03
+I (2367) LVGL: Starting LVGL task
+I (2378) ui_shell: display rotation restored: 2
+I (2514) ui_shell: idle timeout: 0 s (0=never)
+I (2514) ui_shell: locked (screen dimmed to 22%)
+I (2517) ui_boot: boot check UI ready
+I (2517) ui_shell: shell ready, 8 app(s) registered
+I (2550) ui_boot: [check] 显示 = OK (480x480)
+I (2550) ui_boot: [check] 触摸 = OK (ST7123)
+I (2550) ui_boot: [check] 内存 = OK (内部 263K)
+I (2554) ui_boot: [check] 系统 = OK (网络栈就绪)
+I (2559) transport: Attempt connection with slave: retry[0]
+W (2564) H_SDIO_DRV: Reset slave using GPIO[54]
+I (2608) os_wrapper_esp: GPIO [54] configured
+I (4150) sdio_wrapper: SDIO master: Slot 1, Data-Lines: 4-bit Freq(KHz)[40000 KHz]
+I (4150) sdio_wrapper: GPIOs: CLK[18] CMD[19] D0[14] D1[15] D2[16] D3[17] Slave_Reset[54]
+I (4154) sdio_wrapper: Queues: Tx[20] Rx[20] SDIO-Rx-Mode[1]
+I (4193) sdio_wrapper: Function 0 Blocksize: 512
+I (4194) sdio_wrapper: Function 1 Blocksize: 512
+I (4294) H_SDIO_DRV: Card init success, TRANSPORT_RX_ACTIVE
+I (4294) transport: set_transport_state: 1
+I (4294) transport: Waiting for esp_hosted slave to be ready
+I (4310) H_SDIO_DRV: SDIO Host operating in STREAMING MODE
+I (4310) H_SDIO_DRV: Open data path at slave
+I (4310) H_SDIO_DRV: Starting SDIO process rx task
+I (4337) H_SDIO_DRV: Received ESP_PRIV_IF type message
+I (4337) transport: Received INIT event from ESP32 peripheral
+I (4337) transport: EVENT: 12
+I (4339) transport: Identified slave [esp32c5]
+I (4343) transport: SDIO mode: slave: streaming, host: streaming
+I (4349) transport: EVENT: 11
+I (4352) transport: capabilities: 0xd
+I (4355) transport: Features supported are:
+I (4359) transport: 	 * WLAN
+I (4362) transport: 	   - HCI over SDIO
+I (4365) transport: 	   - BLE only
+I (4368) transport: EVENT: 16
+I (4371) transport: extended capabilities: 0x0
+I (4375) transport: Extended Features supported: [0]
+I (4380) transport: EVENT: 13
+I (4382) transport: ESP board type is : 23 
+
+I (4387) transport: Base transport is set-up, TRANSPORT_TX_ACTIVE
+I (4392) H_API: Transport active
+I (4395) transport: Slave chip Id[12]
+I (4399) transport: raw_tp_dir[-], flow_ctrl: low[60] high[80]
+I (4404) transport: transport_delayed_init
+I (4408) esp_cli: Registering command: crash
+I (4412) esp_cli: Registering command: reboot
+I (4416) esp_cli: Registering command: mem-dump
+I (4420) esp_cli: Registering command: task-dump
+I (4425) esp_cli: Registering command: cpu-dump
+I (4429) esp_cli: Registering command: heap-trace
+I (4433) esp_cli: Registering command: sock-dump
+I (4438) esp_cli: Registering command: host-power-save
+I (4443) vhci_drv: Host BT Support: Enabled
+I (4447) vhci_drv: 	BT Transport Type: VHCI
+I (4450) H_SDIO_DRV: Received INIT event
+I (4454) H_SDIO_DRV: Event type: 0x22
+I (4458) H_SDIO_DRV: Write thread started
+I (4910) RPC_WRAP: Coprocessor Boot-up
+I (5073) wifi_mgr: loaded 1 saved network(s)
+I (5073) wifi_mgr:   [0] "H***O" pass_len=8
+I (5991) H_API: esp_wifi_remote_connect
+I (5994) RPC_WRAP: ESP Event: wifi station started
+I (6021) wifi_mgr: wifi started, auto-connect "H***O"
+I (6021) trade_day: holiday cache loaded: 71 day(s)
+I (6022) trade_day: calendar task started (cached=71, ready=1)
+I (6025) rtsp: RTSP server listening on 554, url rtsp://<ip>:554/stream
+I (6031) app_audio: PA enabled (GPIO53)
+I (6049) ES8311: Work in Slave mode
+E (6053) i2s_common: i2s_channel_disable(1262): the channel has not been enabled yet
+E (6053) i2s_common: i2s_channel_disable(1262): the channel has not been enabled yet
+I (6056) I2S_IF: STD: TX, data_bit: 16, slot_bit: 16, ws_width: 16, slot_mode: MONO, slot_mask: 0x1
+I (6065) I2S_IF: STD: TX, sample_rate_hz: 16000, mclk_multiple: 256, clk_src: 0
+I (6072) I2S_IF: STD: RX, data_bit: 16, slot_bit: 16, ws_width: 16, slot_mode: MONO, slot_mask: 0x1
+I (6081) I2S_IF: STD: RX, sample_rate_hz: 16000, mclk_multiple: 256, clk_src: 0
+I (6105) Adev_Codec: Open codec device OK
+I (6106) app_audio: volume = 0
+I (6106) app_audio: ES8311 codec initialized (16kHz mono 16bit)
+I (6107) sc2336: Detected Camera sensor PID=0xcb3a
+I (6208) app_video: version: 0.8.0
+I (6208) app_video: driver:  MIPI-CSI
+I (6208) app_video: card:    MIPI-CSI
+I (6208) app_video: bus:     esp32p4:MIPI-CSI
+I (6211) app_video: width=1280 height=720
+I (6308) app_video: capture format -> 1280x720@60
+I (6308) ipcam: camera format: 1280x720, fourcc=0x32315559, buf=0 KB
+I (6308) encoder: H.264 encoder ready: 1280x720 @30fps, 2500000 bps
+I (6313) ipcam: h264: 1280x720 direct
+I (6366) app_video: Video Stream Start
+I (6369) sdmmc_periph: sdmmc_host_init: SDMMC host already initialized, skipping init flow
+I (6369) ipcam: system up: rtsp://<device-ip>:554/stream  （下拉屏幕可配置 Wi-Fi）
+I (6375) main_task: Returned from app_main()
+I (6401) ui_boot: [check] 相机 = OK (已出图)
+I (6401) ipcam: first camera frame 1280x720
+I (6410) storage: TF card mounted (4-bit) 7.3 GB, free 7.3 GB
+I (6411) storage: photo dir /sdcard/DCIM, next id 5
+I (6411) ipcam: storage ready at /sdcard/DCIM (TF card)
+I (6414) ui_boot: [check] 存储 = OK (TF 卡)
+I (6471) ui_boot: [check] 相机 = OK (已出图)
+I (8471) ui_boot: [check] 网络 = SKIP (待连接)
+I (8971) ipcam: boot self-check finished
+I (10021) rpc_req: Scan start Req
+
+W (10044) rpc_rsp: Hosted RPC_Resp [0x21e], uid [8], resp code [12294]
+W (10044) wifi_mgr: scan start failed: 0x3006
+I (15668) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (15669) wifi_mgr: auto-reconnect "H***O" #1 in 500ms (reason 201)
+I (16169) H_API: esp_wifi_remote_connect
+I (20669) rpc_req: Scan start Req
+
+W (20692) rpc_rsp: Hosted RPC_Resp [0x21e], uid [10], resp code [12294]
+W (20693) wifi_mgr: scan start failed: 0x3006
+I (25835) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (25835) wifi_mgr: auto-reconnect "H***O" #2 in 1000ms (reason 201)
+I (26835) H_API: esp_wifi_remote_connect
+I (27593) ui_boot: boot overlay finishing at 25079 ms (lock_ready=0)
+I (29285) ui_boot: boot check overlay removed
+I (30835) rpc_req: Scan start Req
+
+W (30859) rpc_rsp: Hosted RPC_Resp [0x21e], uid [12], resp code [12294]
+W (30859) wifi_mgr: scan start failed: 0x3006
+I (36369) ipcam: [heartbeat] up=34s touch=1 wifi=连接中 ip=0.0.0.0 rtsp_clients=0 enc=1219 fr heap_int=137 KB heap_spi=16464 KB
+I (36371) ui_stock: watchlist loaded: 5 stock(s)
+I (36374) ui_stock: alerts loaded: 2
+I (36502) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (36503) wifi_mgr: auto-reconnect "H***O" #3 in 2000ms (reason 201)
+I (38503) H_API: esp_wifi_remote_connect
+I (41503) rpc_req: Scan start Req
+
+W (41526) rpc_rsp: Hosted RPC_Resp [0x21e], uid [14], resp code [12294]
+W (41526) wifi_mgr: scan start failed: 0x3006
+I (42444) ipcam: [t] app opened
+I (42444) ui_stock: [t] fake indev created
+I (42444) ui_stock: [t] tap target 323,55 (card 178..469 / 6..105)
+I (43046) ipcam: [t] ==== tap round 0 ====
+I (43047) ui_stock: kline task started
+I (43047) ui_stock: kline request sh601398
+I (43047) ui_stock: [t] clicked card, open=1
+I (46081) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=0 open_cnt=1 heap=81KB
+I (46081) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (46084) ui_stock: [t] detail closed
+I (46888) ipcam: [t] ==== tap round 1 ====
+I (46888) ui_stock: kline request sh601398
+I (46889) ui_stock: [t] clicked card, open=1
+I (48169) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (48169) wifi_mgr: auto-reconnect "H***O" #4 in 4000ms (reason 201)
+I (49919) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=0 open_cnt=2 heap=81KB
+I (49919) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (49922) ui_stock: [t] detail closed
+I (50726) ipcam: [t] ==== tap round 2 ====
+I (50726) ui_stock: kline request sh601398
+I (50727) ui_stock: [t] clicked card, open=1
+I (52169) H_API: esp_wifi_remote_connect
+I (53169) rpc_req: Scan start Req
+
+W (53193) rpc_rsp: Hosted RPC_Resp [0x21e], uid [16], resp code [12294]
+W (53193) wifi_mgr: scan start failed: 0x3006
+I (53790) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=0 open_cnt=3 heap=81KB
+I (53790) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (53793) ui_stock: [t] detail closed
+I (54597) ipcam: [t] ==== tap round 3 ====
+I (54597) ui_stock: kline request sh601398
+I (54598) ui_stock: [t] clicked card, open=1
+I (57598) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=0 open_cnt=4 heap=81KB
+I (57598) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (57601) ui_stock: [t] detail closed
+I (58405) ipcam: [t] ==== tap round 4 ====
+I (58405) ui_stock: kline request sh601398
+I (58406) ui_stock: [t] clicked card, open=1
+I (61470) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=0 open_cnt=5 heap=81KB
+I (61470) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (61474) ui_stock: [t] detail closed
+I (61834) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (61835) wifi_mgr: auto-reconnect "H***O" #5 in 8000ms (reason 201)
+I (62315) ipcam: [t] ==== tap round 5 ====
+I (62315) ui_stock: kline request sh601398
+I (62316) ui_stock: [t] clicked card, open=1
+I (65316) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=0 open_cnt=6 heap=81KB
+I (65316) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (65319) ui_stock: [t] detail closed
+I (66123) ipcam: [t] ==== tap round 6 ====
+I (66123) ui_stock: [t] press
+I (66369) ipcam: [heartbeat] up=64s touch=1 wifi=未连接 ip=0.0.0.0 rtsp_clients=0 enc=2447 fr heap_int=81 KB heap_spi=16342 KB
+I (66373) ui_stock: [t] release (detail open=0)
+I (66398) ui_shell: unlocked
+I (66835) rpc_req: Scan start Req
+
+I (69373) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=1 open_cnt=6 heap=81KB
+I (69373) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (69376) ui_stock: [t] detail closed
+I (69835) H_API: esp_wifi_remote_connect
+I (69857) RPC_WRAP: ESP Event: StaScanDone
+I (69879) wifi_mgr: scan done: 0 unique AP(s)
+I (70180) ipcam: [t] ==== tap round 7 ====
+I (70180) ui_stock: [t] press
+I (70430) ui_stock: [t] release (detail open=0)
+I (73430) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=1 open_cnt=6 heap=81KB
+I (73430) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (73433) ui_stock: [t] detail closed
+I (74237) ipcam: [t] ==== tap round 8 ====
+I (74237) ui_stock: [t] press
+I (74487) ui_stock: [t] release (detail open=0)
+I (77487) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=1 open_cnt=6 heap=81KB
+I (77487) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (77490) ui_stock: [t] detail closed
+I (78294) ipcam: [t] ==== tap round 9 ====
+I (78294) ui_stock: [t] press
+I (78544) ui_stock: [t] release (detail open=0)
+I (79502) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (79502) wifi_mgr: auto-reconnect "H***O" #6 in 15000ms (reason 201)
+I (81544) ui_stock: [t] state: detail=0x4ff8d6e0 hidden=1 open_cnt=6 heap=81KB
+I (81544) ui_stock: [t] kbar n=0 secid= busy=0 fail=0 img=0x4ff71708 buf=0x48ff3d04
+I (81547) ui_stock: [t] detail closed
+I (82351) ipcam: [t] done heap_int=81KB psram=16342KB
+I (94502) H_API: esp_wifi_remote_connect
+I (96369) ipcam: [heartbeat] up=94s touch=1 wifi=连接中 ip=0.0.0.0 rtsp_clients=0 enc=3688 fr heap_int=81 KB heap_spi=16342 KB
+I (104167) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (104167) wifi_mgr: auto-reconnect "H***O" #7 in 15000ms (reason 201)
+I (119167) H_API: esp_wifi_remote_connect
+I (126369) ipcam: [heartbeat] up=124s touch=1 wifi=连接中 ip=0.0.0.0 rtsp_clients=0 enc=4934 fr heap_int=81 KB heap_spi=16342 KB
+I (128833) RPC_WRAP: ESP Event: Station mode: Disconnected
+W (128833) wifi_mgr: auto-reconnect "H***O" #8 in 15000ms (reason 201)
+I (133833) rpc_req: Scan start Req
+
+I (143489) RPC_WRAP: ESP Event: StaScanDone
+I (143507) wifi_mgr: scan done: 4 unique AP(s)
+I (143833) H_API: esp_wifi_remote_connect

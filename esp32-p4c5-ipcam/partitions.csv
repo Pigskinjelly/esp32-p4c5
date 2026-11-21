@@ -1,0 +1,6 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+# 分区表本体位于 0x9000（rev3 bootloader 需要更多空间），故 NVS/PHY 从 0xA000 起
+nvs,      data, nvs,     0xA000,  0x5000,
+phy_init, data, phy,     0xF000,  0x1000,
+factory,  app,  factory, 0x10000, 8M,
+storage,  data, spiffs,  ,        7M,

@@ -1,0 +1,11 @@
+# ESP-IDF 构建产物
+build/
+sdkconfig
+sdkconfig.old
+
+# 组件管理器
+managed_components/
+dependencies.lock
+
+# 编译日志
+*.log

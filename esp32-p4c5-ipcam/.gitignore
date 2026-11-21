@@ -1,0 +1,16 @@
+# ESP-IDF 构建产物
+build/
+sdkconfig.old
+
+# 编译日志（docs/ 下的审计证据要保留）
+*.log
+!docs/**/*.log
+
+# 说明：下面这些**必须入库**（2026-11-19 审计 R-03）
+#   sdkconfig          —— 配置真源（sdkconfig.defaults 与实况不一致，以 sdkconfig 为准）
+#   dependencies.lock  —— 锁定组件版本，保证"同源码 → 同 bin"
+#   managed_components —— esp_cam_sensor 的 sc2336 驱动有本地补丁，重新拉取会覆盖
+
+# 系统垃圾
+.DS_Store
+Thumbs.db

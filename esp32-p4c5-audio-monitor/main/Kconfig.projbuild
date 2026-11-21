@@ -1,0 +1,20 @@
+menu "Remote Audio Monitor Config"
+
+    config MONITOR_WIFI_SSID
+        string "Wi-Fi SSID"
+        default "YOUR_SSID"
+        help
+            Wi-Fi 网络名称（要连接的 AP）。
+
+    config MONITOR_WIFI_PASSWORD
+        string "Wi-Fi Password"
+        default "YOUR_PASSWORD"
+        help
+            Wi-Fi 密码。
+
+    config MONITOR_AUDIO_SAMPLE_RATE
+        int "Audio sample rate (Hz)"
+        default 16000
+        range 8000 48000
+
+endmenu

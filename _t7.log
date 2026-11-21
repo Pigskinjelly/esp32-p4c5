@@ -1,0 +1,8 @@
+100.IXIC   ok=False name= | {"rc":100,"rt":1,"svr":177617933,"lt":1,"full":1,"dlmkts":"","dsc":"0","data":nu
+100.NDX    ok=True name= | {"rc":0,"rt":17,"svr":177617935,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"c
+100.SPX    ok=True name= | {"rc":0,"rt":17,"svr":177617932,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"c
+100.INX    ok=False name= | {"rc":100,"rt":1,"svr":177617926,"lt":1,"full":1,"dlmkts":"","dsc":"0","data":nu
+105.TSLA   ok=True name= | {"rc":0,"rt":17,"svr":177617937,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"c
+106.BABA   ok=True name= | {"rc":0,"rt":17,"svr":177617931,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"c
+105.NVDA   ok=True name= | {"rc":0,"rt":17,"svr":177617927,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"c
+105.MSFT   ok=True name= | {"rc":0,"rt":17,"svr":177617941,"lt":1,"full":0,"dlmkts":"","dsc":"0","data":{"c

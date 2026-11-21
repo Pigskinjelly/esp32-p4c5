@@ -1,0 +1,213 @@
+Command: ninja all
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_codec_dev/Kconfig:4: warning: ESP_IDF_VERSION has 'option env="ESP_IDF_VERSION"', but the environment variable ESP_IDF_VERSION is not set
+CMake Error at D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_common/project_include.cmake:10 (check_expected_tool_version):
+  check_expected_tool_version Function invoked with incorrect arguments for
+  function named: check_expected_tool_version
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-pbv78n/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-pbv78n/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-fflsc3/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-fflsc3/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-buymqr/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-buymqr/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-mk1hb9/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-mk1hb9/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-96fpos/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-96fpos/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-qy7g8c/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/CMakeFiles/CMakeScratch/TryCompile-qy7g8c/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+ninja: error: rebuilding 'build.ninja': subcommand failed

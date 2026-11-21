@@ -1,0 +1,92 @@
+/*
+ * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#pragma once
+
+#include "esp_heap_caps.h"
+
+#define ESP_H264_MEM_INTERNAL MALLOC_CAP_INTERNAL
+/* INTERNAL memory the H.264 DMA can reach. On ESP32-P4, RTC RAM and SPM are
+ * MALLOC_CAP_INTERNAL but not MALLOC_CAP_DMA, and a DMA write there is dropped. */
+#define ESP_H264_MEM_INTERNAL_DMA  (MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA)
+#if defined(MALLOC_CAP_SPIRAM_NO_ENC) && CONFIG_SPIRAM_ENC_EXEMPT
+#define ESP_H264_MEM_SPIRAM (MALLOC_CAP_SPIRAM | MALLOC_CAP_SPIRAM_NO_ENC)
+#else
+#define ESP_H264_MEM_SPIRAM MALLOC_CAP_SPIRAM
+#endif
+#define ALIGN_UP(num, align)    ((align) ? (((num) + ((align) - 1)) & ~((align) - 1)) : (num))
+#define ALIGN_DOWN(num, align)  ((align) ? ((num) & ~((align) - 1)) : (num))
+
+/**
+ * @brief  Free memory previously allocated
+ */
+#define esp_h264_free           heap_caps_free
+
+/**
+ * @brief  Allocate an aligned chunk of memory which has the given capabilities.
+ *
+ * @note   Memory is not initialized (same semantics as malloc).
+ *
+ * @param[in]   alignment    How the pointer received needs to be aligned must be a power of two.
+ *                           Raised to `esp_cache_get_alignment(caps)` (P4: INTERNAL 64 B, SPIRAM 128 B).
+ * @param[in]   n            Number of continuing chunks of memory to allocate
+ * @param[in]   size         Size, in bytes, of a chunk of memory to allocate
+ * @param[out]  actual_size  Aligned allocation size in bytes; caller retains ownership
+ * @param[in]   caps         ESP_H264_MEM_INTERNAL, ESP_H264_MEM_INTERNAL_DMA, or ESP_H264_MEM_SPIRAM
+ *
+ * @return
+ *       - NULL    Failure
+ *       - others  A pointer to the memory allocated on success
+ */
+void *esp_h264_aligned_malloc(uint32_t alignment, uint32_t n, uint32_t size, uint32_t *actual_size, uint32_t caps);
+
+/**
+ * @brief  Allocate an aligned chunk of memory which has the given capabilities.
+ *
+ * @note   Memory is zero-initialized (same semantics as calloc).
+ *
+ * @param[in]   alignment    How the pointer received needs to be aligned must be a power of two.
+ *                           Raised to `esp_cache_get_alignment(caps)` (P4: INTERNAL 64 B, SPIRAM 128 B).
+ * @param[in]   n            Number of continuing chunks of memory to allocate
+ * @param[in]   size         Size, in bytes, of a chunk of memory to allocate
+ * @param[out]  actual_size  Aligned allocation size in bytes; caller retains ownership
+ * @param[in]   caps         ESP_H264_MEM_INTERNAL, ESP_H264_MEM_INTERNAL_DMA, or ESP_H264_MEM_SPIRAM
+ *
+ * @return
+ *       - NULL    Failure
+ *       - others  A pointer to the memory allocated on success
+ */
+void *esp_h264_aligned_calloc(uint32_t alignment, uint32_t n, uint32_t size, uint32_t *actual_size, uint32_t caps);
+
+/**
+ * @brief  Allocate a chunk of memory as preference in decreasing order (malloc, not zeroed)
+ *
+ * @param[in]   n            Number of continuing chunks of memory to allocate
+ * @param[in]   size         Size, in bytes, of a chunk of memory to allocate
+ * @param[out]  actual_size  Aligned allocation size in bytes; caller retains ownership
+ * @param[in]   caps1        ESP_H264_MEM_INTERNAL, ESP_H264_MEM_INTERNAL_DMA, or ESP_H264_MEM_SPIRAM
+ * @param[in]   caps2        ESP_H264_MEM_INTERNAL, ESP_H264_MEM_INTERNAL_DMA, or ESP_H264_MEM_SPIRAM
+ *
+ * @return
+ *       - NULL    Failure
+ *       - others  A pointer to the memory allocated on success
+ */
+void *esp_h264_malloc_prefer(uint32_t n, uint32_t size, uint32_t *actual_size, uint32_t caps1, uint32_t caps2);
+
+/**
+ * @brief  Allocate a zero-initialized chunk of memory as preference in decreasing order (calloc)
+ *
+ * @param[in]   n            Number of continuing chunks of memory to allocate
+ * @param[in]   size         Size, in bytes, of a chunk of memory to allocate
+ * @param[out]  actual_size  Aligned allocation size in bytes; caller retains ownership
+ * @param[in]   caps1        ESP_H264_MEM_INTERNAL, ESP_H264_MEM_INTERNAL_DMA, or ESP_H264_MEM_SPIRAM
+ * @param[in]   caps2        ESP_H264_MEM_INTERNAL, ESP_H264_MEM_INTERNAL_DMA, or ESP_H264_MEM_SPIRAM
+ *
+ * @return
+ *       - NULL    Failure
+ *       - others  A pointer to the memory allocated on success
+ */
+void *esp_h264_calloc_prefer(uint32_t n, uint32_t size, uint32_t *actual_size, uint32_t caps1, uint32_t caps2);

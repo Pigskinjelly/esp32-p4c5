@@ -1,0 +1,4 @@
+dependencies:
+  espressif/esp_h264:
+    version: '*'
+  idf: '>=5.5.3'

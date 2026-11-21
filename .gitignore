@@ -1,0 +1,6 @@
+# Nested version-control metadata (not project content)
+**/.git/
+**/.git
+
+# 安全：网易云开放平台凭据截图（AppID/Secret/公私钥），禁止入库
+图片/网易云.png

@@ -1,0 +1,440 @@
+Command: ninja all
+[1/12] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/wifi_sta.c.obj
+FAILED: esp-idf/main/CMakeFiles/__idf_main.dir/wifi_sta.c.obj 
+D:\Espressif\tools\riscv32-esp-elf\esp-14.2.0_20260121\riscv32-esp-elf\bin\riscv32-esp-elf-gcc.exe -DESP_PLATFORM -DIDF_VER=\"v5.5.5-dirty\" -DMBEDTLS_CONFIG_FILE=\"mbedtls/esp_config.h\" -DSOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE -DSOC_XTAL_FREQ_MHZ=CONFIG_XTAL_FREQ -DUNITY_INCLUDE_CONFIG_H -D_GLIBCXX_HAVE_POSIX_SEMAPHORE -D_GLIBCXX_USE_POSIX_SEMAPHORE -D_GNU_SOURCE -D_POSIX_READER_WRITER_LOCKS -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/config -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/platform_include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/config/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/config/include/freertos -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/config/riscv/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/FreeRTOS-Kernel/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/FreeRTOS-Kernel/portable/riscv/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/esp_additions/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/include/soc -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/include/soc/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/dma/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/ldo/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/debug_probe/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/mspi_timing_tuning/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/mspi_timing_tuning/tuning_scheme_impl/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/power_supply/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/port/esp32p4/. -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/port/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/port/esp32p4/private_include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/mspi_timing_tuning/port/esp32p4/. -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/heap/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/heap/tlsf -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/log/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/esp32p4/register/hw_ver1 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/hal/platform_port/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/hal/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/hal/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/include/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_common/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/port/soc -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/port/include/riscv -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/port/include/private -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/riscv/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/include/apps -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/include/apps/sntp -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/lwip/src/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/freertos/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/esp32xx/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/esp32xx/include/arch -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/esp32xx/include/sys -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_codec_dev/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_codec_dev/interface -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_codec_dev/device/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_hosted/host -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_hosted/host/api/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdmmc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/sdmmc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_gpio/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_spi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_pm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_uart/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/vfs/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_event/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_netif/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/port/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/library -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/esp_crt_bundle/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/3rdparty/everest/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/3rdparty/p256-m -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/3rdparty/p256-m/p256-m -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_app_format/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_bootloader_format/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/app_update/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader_support/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader_support/bootloader_flash/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_partition/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/efuse/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/efuse/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_mm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/spi_flash/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_security/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/pthread/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_timer/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_gptimer/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_ringbuf/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_psram/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_psram/device/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_psram/xip_impl/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/app_trace/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_usb_serial_jtag/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_vfs_console/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/nvs_flash/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/wpa_supplicant/esp_supplicant/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_coex/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_wifi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_wifi/wifi_apps/nan_app/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_gdbstub/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/unity/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/unity/unity/src -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/cmock/CMock/src -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/console -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_pcnt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_mcpwm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_ana_cmpr/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_i2s/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdspi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdio/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_dac/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_bitscrambler/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_rmt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_tsens/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_i2c/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_ledc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_parlio/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_twai/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/deprecated -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/i2c/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/touch_sensor/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/twai/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/http_parser -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp-tls -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp-tls/esp-tls-crypto -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/interface -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/deprecated/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_isp/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/interface -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/csi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/isp_dvp/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/dvp/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_jpeg/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_ppa/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_touch_sens/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_touch_sens/hw_ver3/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_eth/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hal_ieee802154/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hid/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/tcp_transport/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_http_client/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_http_server/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_https_ota/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_https_server/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/interface -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/rgb/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/dsi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protobuf-c/protobuf-c -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/common -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/security -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/transports -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/crypto/srp6a -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/proto-c -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_local_ctrl/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/espcoredump/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/espcoredump/include/port/riscv -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/wear_levelling/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/fatfs/diskio -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/fatfs/src -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/fatfs/vfs -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/idf_test/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/idf_test/include/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/ieee802154/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/json/cJSON -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mqtt/esp-mqtt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/nvs_sec_provider/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/rt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/spiffs/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/usb/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/wifi_provisioning/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_serial_slave_link/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__eppp_link/include @"<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/toolchain/cflags" -fdiagnostics-color=always -ffunction-sections -fdata-sections -Wall -Werror=all -Wno-error=unused-function -Wno-error=unused-variable -Wno-error=unused-but-set-variable -Wno-error=deprecated-declarations -Wextra -Wno-error=extra -Wno-unused-parameter -Wno-sign-compare -Wno-enum-conversion -gdwarf-4 -ggdb -Og -fno-shrink-wrap -fmacro-prefix-map=<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor=. -fmacro-prefix-map=D:/Espressif/frameworks/esp-idf-v5.5.5=/IDF -fstrict-volatile-bitfields -fno-jump-tables -fno-tree-switch-conversion -std=gnu17 -Wno-old-style-declaration -MD -MT esp-idf/main/CMakeFiles/__idf_main.dir/wifi_sta.c.obj -MF esp-idf\main\CMakeFiles\__idf_main.dir\wifi_sta.c.obj.d -o esp-idf/main/CMakeFiles/__idf_main.dir/wifi_sta.c.obj -c <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c
+In file included from <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c:7:
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c: In function 'wifi_sta_start':
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected/esp_wifi.h:340:26: error: 'CONFIG_WIFI_RMT_STATIC_RX_BUFFER_NUM' undeclared (first use in this function); did you mean 'CONFIG_ETH_DMA_RX_BUFFER_NUM'?
+  340 |     .static_rx_buf_num = CONFIG_WIFI_RMT_STATIC_RX_BUFFER_NUM,\
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c:51:30: note: in expansion of macro 'WIFI_INIT_CONFIG_DEFAULT'
+   51 |     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected/esp_wifi.h:340:26: note: each undeclared identifier is reported only once for each function it appears in
+  340 |     .static_rx_buf_num = CONFIG_WIFI_RMT_STATIC_RX_BUFFER_NUM,\
+      |                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c:51:30: note: in expansion of macro 'WIFI_INIT_CONFIG_DEFAULT'
+   51 |     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected/esp_wifi.h:341:27: error: 'CONFIG_WIFI_RMT_DYNAMIC_RX_BUFFER_NUM' undeclared (first use in this function); did you mean 'WIFI_DYNAMIC_TX_BUFFER_NUM'?
+  341 |     .dynamic_rx_buf_num = CONFIG_WIFI_RMT_DYNAMIC_RX_BUFFER_NUM,\
+      |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c:51:30: note: in expansion of macro 'WIFI_INIT_CONFIG_DEFAULT'
+   51 |     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected/esp_wifi.h:342:20: error: 'CONFIG_WIFI_RMT_TX_BUFFER_TYPE' undeclared (first use in this function); did you mean 'CONFIG_ETH_DMA_TX_BUFFER_NUM'?
+  342 |     .tx_buf_type = CONFIG_WIFI_RMT_TX_BUFFER_TYPE,\
+      |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c:51:30: note: in expansion of macro 'WIFI_INIT_CONFIG_DEFAULT'
+   51 |     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected/esp_wifi.h:345:25: error: 'CONFIG_WIFI_RMT_DYNAMIC_RX_MGMT_BUF' undeclared (first use in this function)
+  345 |     .rx_mgmt_buf_type = CONFIG_WIFI_RMT_DYNAMIC_RX_MGMT_BUF,\
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c:51:30: note: in expansion of macro 'WIFI_INIT_CONFIG_DEFAULT'
+   51 |     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected/esp_wifi.h:360:31: error: 'CONFIG_WIFI_RMT_ESPNOW_MAX_ENCRYPT_NUM' undeclared (first use in this function)
+  360 |     .espnow_max_encrypt_num = CONFIG_WIFI_RMT_ESPNOW_MAX_ENCRYPT_NUM, \
+      |                               ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/wifi_sta.c:51:30: note: in expansion of macro 'WIFI_INIT_CONFIG_DEFAULT'
+   51 |     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~
+[2/12] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/audio_stream.c.obj
+FAILED: esp-idf/main/CMakeFiles/__idf_main.dir/audio_stream.c.obj 
+D:\Espressif\tools\riscv32-esp-elf\esp-14.2.0_20260121\riscv32-esp-elf\bin\riscv32-esp-elf-gcc.exe -DESP_PLATFORM -DIDF_VER=\"v5.5.5-dirty\" -DMBEDTLS_CONFIG_FILE=\"mbedtls/esp_config.h\" -DSOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE -DSOC_XTAL_FREQ_MHZ=CONFIG_XTAL_FREQ -DUNITY_INCLUDE_CONFIG_H -D_GLIBCXX_HAVE_POSIX_SEMAPHORE -D_GLIBCXX_USE_POSIX_SEMAPHORE -D_GNU_SOURCE -D_POSIX_READER_WRITER_LOCKS -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/config -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/platform_include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/config/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/config/include/freertos -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/config/riscv/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/FreeRTOS-Kernel/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/FreeRTOS-Kernel/portable/riscv/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/FreeRTOS-Kernel/portable/riscv/include/freertos -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos/esp_additions/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/include/soc -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/include/soc/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/dma/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/ldo/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/debug_probe/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/mspi_timing_tuning/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/mspi_timing_tuning/tuning_scheme_impl/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/power_supply/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/port/esp32p4/. -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/port/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/port/esp32p4/private_include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support/mspi_timing_tuning/port/esp32p4/. -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/heap/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/heap/tlsf -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/log/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/esp32p4/register/hw_ver1 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/hal/platform_port/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/hal/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/hal/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/include/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_common/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/port/soc -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/port/include/riscv -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system/port/include/private -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/riscv/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/include/apps -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/include/apps/sntp -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/lwip/src/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/freertos/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/esp32xx/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/esp32xx/include/arch -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/lwip/port/esp32xx/include/sys -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_codec_dev/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_codec_dev/interface -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_codec_dev/device/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_hosted/host -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_hosted/host/api/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdmmc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/sdmmc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_gpio/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_spi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_pm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_uart/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/vfs/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_event/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_netif/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/port/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/library -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/esp_crt_bundle/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/3rdparty/everest/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/3rdparty/p256-m -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mbedtls/mbedtls/3rdparty/p256-m/p256-m -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_app_format/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_bootloader_format/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/app_update/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader_support/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader_support/bootloader_flash/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_partition/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/efuse/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/efuse/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_mm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/spi_flash/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_security/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/pthread/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_timer/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_gptimer/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_ringbuf/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_psram/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_psram/device/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_psram/xip_impl/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/app_trace/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_usb_serial_jtag/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_vfs_console/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/nvs_flash/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/wpa_supplicant/esp_supplicant/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_coex/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_wifi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_wifi/wifi_apps/nan_app/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_gdbstub/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/unity/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/unity/unity/src -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/cmock/CMock/src -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/console -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_pcnt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_mcpwm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_ana_cmpr/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_i2s/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdspi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdio/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_dac/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_bitscrambler/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_rmt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_tsens/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_sdm/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_i2c/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_ledc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_parlio/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_twai/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/deprecated -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/i2c/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/touch_sensor/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/driver/twai/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/http_parser -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp-tls -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp-tls/esp-tls-crypto -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/interface -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/esp32p4/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_adc/deprecated/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_isp/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/interface -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/csi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/isp_dvp/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_cam/dvp/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_jpeg/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_ppa/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_touch_sens/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_driver_touch_sens/hw_ver3/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_eth/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hal_ieee802154/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hid/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/tcp_transport/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_http_client/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_http_server/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_https_ota/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_https_server/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/interface -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/rgb/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_lcd/dsi/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protobuf-c/protobuf-c -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/common -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/security -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/transports -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/include/crypto/srp6a -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/protocomm/proto-c -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_local_ctrl/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/espcoredump/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/espcoredump/include/port/riscv -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/wear_levelling/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/fatfs/diskio -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/fatfs/src -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/fatfs/vfs -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/idf_test/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/idf_test/include/esp32p4 -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/ieee802154/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/json/cJSON -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/mqtt/esp-mqtt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/nvs_sec_provider/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/rt/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/spiffs/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/usb/include -ID:/Espressif/frameworks/esp-idf-v5.5.5/components/wifi_provisioning/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__esp_serial_slave_link/include -I<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/managed_components/espressif__eppp_link/include @"<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/toolchain/cflags" -fdiagnostics-color=always -ffunction-sections -fdata-sections -Wall -Werror=all -Wno-error=unused-function -Wno-error=unused-variable -Wno-error=unused-but-set-variable -Wno-error=deprecated-declarations -Wextra -Wno-error=extra -Wno-unused-parameter -Wno-sign-compare -Wno-enum-conversion -gdwarf-4 -ggdb -Og -fno-shrink-wrap -fmacro-prefix-map=<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor=. -fmacro-prefix-map=D:/Espressif/frameworks/esp-idf-v5.5.5=/IDF -fstrict-volatile-bitfields -fno-jump-tables -fno-tree-switch-conversion -std=gnu17 -Wno-old-style-declaration -MD -MT esp-idf/main/CMakeFiles/__idf_main.dir/audio_stream.c.obj -MF esp-idf\main\CMakeFiles\__idf_main.dir\audio_stream.c.obj.d -o esp-idf/main/CMakeFiles/__idf_main.dir/audio_stream.c.obj -c <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c: In function 'ws_handler':
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:61:5: error: unknown type name 'httpd_ws_frame_t'
+   61 |     httpd_ws_frame_t ws_pkt;
+      |     ^~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:63:31: error: 'httpd_ws_frame_t' undeclared (first use in this function)
+   63 |     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+      |                               ^~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:63:31: note: each undeclared identifier is reported only once for each function it appears in
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:64:11: error: request for member 'type' in something not a structure or union
+   64 |     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+      |           ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:64:19: error: 'HTTPD_WS_TYPE_TEXT' undeclared (first use in this function); did you mean 'HTTPD_TYPE_TEXT'?
+   64 |     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+      |                   ^~~~~~~~~~~~~~~~~~
+      |                   HTTPD_TYPE_TEXT
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:65:21: error: implicit declaration of function 'httpd_ws_recv_frame' [-Wimplicit-function-declaration]
+   65 |     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+      |                     ^~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:69:15: error: request for member 'len' in something not a structure or union
+   69 |     if (ws_pkt.len) {
+      |               ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:70:31: error: request for member 'len' in something not a structure or union
+   70 |         buf = calloc(1, ws_pkt.len + 1);
+      |                               ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:72:19: error: request for member 'payload' in something not a structure or union
+   72 |             ws_pkt.payload = buf;
+      |                   ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:73:53: error: request for member 'len' in something not a structure or union
+   73 |             httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+      |                                                     ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c: In function 'stream_task':
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:103:17: error: unknown type name 'httpd_ws_frame_t'
+  103 |                 httpd_ws_frame_t ws_pkt = {
+      |                 ^~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:104:21: error: field name not in record or union initializer
+  104 |                     .final = true,
+      |                     ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:104:21: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:105:21: error: field name not in record or union initializer
+  105 |                     .fragmented = false,
+      |                     ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:105:21: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:105:35: warning: excess elements in scalar initializer
+  105 |                     .fragmented = false,
+      |                                   ^~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:105:35: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:106:21: error: field name not in record or union initializer
+  106 |                     .type = HTTPD_WS_TYPE_BINARY,
+      |                     ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:106:21: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:106:29: error: 'HTTPD_WS_TYPE_BINARY' undeclared (first use in this function)
+  106 |                     .type = HTTPD_WS_TYPE_BINARY,
+      |                             ^~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:106:29: warning: excess elements in scalar initializer
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:106:29: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:107:21: error: field name not in record or union initializer
+  107 |                     .payload = pcm,
+      |                     ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:107:21: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:107:32: warning: excess elements in scalar initializer
+  107 |                     .payload = pcm,
+      |                                ^~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:107:32: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:108:21: error: field name not in record or union initializer
+  108 |                     .len = r,
+      |                     ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:108:21: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:108:28: warning: excess elements in scalar initializer
+  108 |                     .len = r,
+      |                            ^
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:108:28: note: (near initialization for 'ws_pkt')
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:110:17: error: implicit declaration of function 'httpd_ws_send_frame_async' [-Wimplicit-function-declaration]
+  110 |                 httpd_ws_send_frame_async(s_server, client_fds[i], &ws_pkt);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c: In function 'audio_stream_start':
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:138:10: error: 'httpd_uri_t' {aka 'struct httpd_uri'} has no member named 'is_websocket'
+  138 |         .is_websocket = true,
+      |          ^~~~~~~~~~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:138:25: warning: excess elements in struct initializer
+  138 |         .is_websocket = true,
+      |                         ^~~~
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/main/audio_stream.c:138:25: note: (near initialization for 'ws_uri')
+[3/12] Performing configure step for 'bootloader'
+FAILED: bootloader-prefix/src/bootloader-stamp/bootloader-configure <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure 
+C:\WINDOWS\system32\cmd.exe /C "cd /D <用户目录>\Desktop\ESP32-P4C5\esp32-p4c5-audio-monitor\build\bootloader && D:\Espressif\tools\cmake\3.30.2\bin\cmake.exe -DSDKCONFIG=<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/sdkconfig -DIDF_PATH=D:/Espressif/frameworks/esp-idf-v5.5.5 -DIDF_TARGET=esp32p4 -DPYTHON_DEPS_CHECKED=1 -DPYTHON=D:/Espressif/python_env/idf5.5_py3.11_env/Scripts/python.exe -DEXTRA_COMPONENT_DIRS=D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader -DPROJECT_SOURCE_DIR=<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor -DIGNORE_EXTRA_COMPONENT= -GNinja -S D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader/subproject -B <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader && D:\Espressif\tools\cmake\3.30.2\bin\cmake.exe -E touch <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure"
+-- Found Git: D:/Espressif/tools/idf-git/2.44.0/cmd/git.exe (found version "2.44.0.windows.1")
+-- Component directory D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_blockdev does not contain a CMakeLists.txt file. No component will be added
+-- Minimal build - OFF
+-- The C compiler identification is GNU 14.2.0
+-- The CXX compiler identification is GNU 14.2.0
+-- The ASM compiler identification is GNU
+-- Found assembler: D:/Espressif/tools/riscv32-esp-elf/esp-14.2.0_20260121/riscv32-esp-elf/bin/riscv32-esp-elf-gcc.exe
+-- Detecting C compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-9esztb/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:601 (__project)
+  CMakeLists.txt:71 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-9esztb/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:601 (__project)
+  CMakeLists.txt:71 (project)
+
+
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: D:/Espressif/tools/riscv32-esp-elf/esp-14.2.0_20260121/riscv32-esp-elf/bin/riscv32-esp-elf-gcc.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-7cr4ae/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:601 (__project)
+  CMakeLists.txt:71 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-7cr4ae/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:601 (__project)
+  CMakeLists.txt:71 (project)
+
+
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: D:/Espressif/tools/riscv32-esp-elf/esp-14.2.0_20260121/riscv32-esp-elf/bin/riscv32-esp-elf-g++.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Building ESP-IDF components for target esp32p4
+-- ESP-TEE is currently supported only on the esp32c6;esp32h2;esp32c5 SoCs
+-- Project sdkconfig file <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/sdkconfig
+-- Detecting C compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-daabk9/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-daabk9/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+-- Detecting C compiler ABI info - done
+-- Detecting CXX compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-mqswg4/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-mqswg4/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib/project_include.cmake:86 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+-- Detecting CXX compiler ABI info - done
+-- Detecting C compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-2lsshn/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-2lsshn/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+-- Detecting C compiler ABI info - done
+-- Detecting CXX compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-1wsk6n/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-1wsk6n/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/project_include.cmake:56 (idf_toolchain_rerun_abi_detection)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:471 (include)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/build.cmake:722 (__build_process_project_includes)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/project.cmake:752 (idf_build_process)
+  CMakeLists.txt:71 (project)
+
+
+-- Detecting CXX compiler ABI info - done
+-- Detecting C compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-585545/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-585545/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+-- Detecting C compiler ABI info - done
+-- Detecting CXX compiler ABI info
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-u33iwp/CMakeCache.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+CMake Error at D:/Espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile):
+  The file:
+
+    <用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-u33iwp/CMakeFiles/TargetDirectories.txt
+
+  could not be removed:
+
+    �ܾ����ʡ�
+
+Call Stack (most recent call first):
+  D:/Espressif/frameworks/esp-idf-v5.5.5/tools/cmake/toolchain_flags.cmake:179 (cmake_determine_compiler_abi)
+  D:/Espressif/frameworks/esp-idf-v5.5.5/CMakeLists.txt:85 (idf_toolchain_rerun_abi_detection)
+
+
+-- Detecting CXX compiler ABI info - done
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/riscv/ld/rom.api.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc/esp32p4/ld/esp32p4.peripherals.ld
+-- Bootloader project name: "bootloader" version: 1
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.api.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.rvfp.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.wdt.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.systimer.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.version.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.libc.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.libc-suboptimal_for_misaligned_mem.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom/esp32p4/ld/esp32p4.rom.newlib.ld
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader/subproject/main/ld/esp32p4/bootloader.rom.ld
+-- Components: bootloader bootloader_support efuse esp_app_format esp_bootloader_format esp_common esp_hw_support esp_rom esp_security esp_system esptool_py freertos hal log main micro-ecc newlib partition_table riscv soc spi_flash
+-- Component paths: D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader_support D:/Espressif/frameworks/esp-idf-v5.5.5/components/efuse D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_app_format D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_bootloader_format D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_common D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_hw_support D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_rom D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_security D:/Espressif/frameworks/esp-idf-v5.5.5/components/esp_system D:/Espressif/frameworks/esp-idf-v5.5.5/components/esptool_py D:/Espressif/frameworks/esp-idf-v5.5.5/components/freertos D:/Espressif/frameworks/esp-idf-v5.5.5/components/hal D:/Espressif/frameworks/esp-idf-v5.5.5/components/log D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader/subproject/main D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader/subproject/components/micro-ecc D:/Espressif/frameworks/esp-idf-v5.5.5/components/newlib D:/Espressif/frameworks/esp-idf-v5.5.5/components/partition_table D:/Espressif/frameworks/esp-idf-v5.5.5/components/riscv D:/Espressif/frameworks/esp-idf-v5.5.5/components/soc D:/Espressif/frameworks/esp-idf-v5.5.5/components/spi_flash
+-- Adding linker script D:/Espressif/frameworks/esp-idf-v5.5.5/components/bootloader/subproject/main/ld/esp32p4/bootloader.ld
+-- Configuring incomplete, errors occurred!
+ninja: build stopped: subcommand failed.

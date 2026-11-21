@@ -1,0 +1,3 @@
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-mn5cu5/CMakeFiles/cmTC_7cbc2.dir
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-mn5cu5/CMakeFiles/edit_cache.dir
+<用户目录>/Desktop/ESP32-P4C5/esp32-p4c5-audio-monitor/build/bootloader/CMakeFiles/CMakeScratch/TryCompile-mn5cu5/CMakeFiles/rebuild_cache.dir
