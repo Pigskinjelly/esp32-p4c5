@@ -248,3 +248,5 @@ t=3100  mDNS 广播 _rtsp._tcp  ← 验收点 B
 | R4 | esp_hosted 与 C5 固件版本须匹配 | SDIO 通信失败 | P4 端锁 2.12.x，与 C5 固件一致 |
 | R5 | IDF 5.5.5 vs 示例 5.5.2/5.5.4 | API 差异 | 统一 5.5.5，锁定组件版本 |
 | R6 | 480×480 初始化序列需匹配屏批次 | 花屏/不亮 | 以 OSPTEK bringup 工程为准，逐条比对 |
+
+> 上表为立项阶段的硬件风险清单。开发推进后的运行期风险与闭环状态（SDIO 接收缓冲、PSRAM 栈写 NVS、RTSP 鉴权、NVS 容量、版本标识等）见 `docs/ESP32-P4C5_复审报告_2026-11-21.md` 与 `docs/DEVELOPMENT.md`。

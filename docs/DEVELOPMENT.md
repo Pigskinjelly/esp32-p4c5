@@ -21,7 +21,7 @@
 以下为开发过程中定位到的关键问题，都是硬件/运行时层面的真实约束，复刻与二次开发时应重点关注。
 
 ### 内部 RAM 耗尽导致连锁崩溃
-现象：Wi-Fi SDIO 缓冲分配失败触发 assert 重启、TLS 握手失败、地图任务一创建就复位。根因是开机后内部 RAM 仅剩约 18KB。处理方式：把大栈任务改用 `xTaskCreateWithCaps(..., MALLOC_CAP_SPIRAM)` 在 PSRAM 中分配栈（`map_task` / `player_task` / `net_srch` / `cam_worker`），内部堆从 18KB 回升至 77~153KB。
+现象：Wi-Fi SDIO 缓冲分配失败触发 assert 重启、TLS 握手失败、地图任务一创建就复位。根因是开机后内部 RAM 仅剩约 18KB。处理方式：把大栈任务改用 `xTaskCreateWithCaps(..., MALLOC_CAP_SPIRAM)` 在 PSRAM 中分配栈（`map_task` / `player_task` / `net_srch`），内部堆从 18KB 回升至 77~153KB。后续审计发现 `cam_worker` 放在 PSRAM 栈会在写 NVS 时触发断言，已在 V2.34 改回内部栈并增加失败日志。
 
 ### 触摸"位置不准"
 ST7123 会上报 5 个触点，而 LVGL 只取第 0 点，导致触摸点错位。处理方式：按接触面积降序排序、读取数组清零、增加 max_touches 保护与读取容错，读取周期 30ms → 10ms。
@@ -29,8 +29,10 @@ ST7123 会上报 5 个触点，而 LVGL 只取第 0 点，导致触摸点错位�
 ### 相机 PPA 竞争与卡帧
 拍照时 PPA 报 `exceed maximum pending transactions`，是 PPA 事务并发竞争；采集侧"卡一帧"则与预览监听槽计数上界 bugs 相关。处理方式：PPA 互斥锁、扫描全槽监听、JPEG 编码超时 40ms → 300ms。
 
-### SDIO 随机重启（R-30）
-`esp_hosted` 在流式接收模式下，每次中断按整批长度申请内部 DMA 内存，失败即 assert。因摄像头管线长期占用内部 DMA 内存，偶发碎片化时触发。处理方式：调整接收缓冲策略，避免大块内部 DMA 频繁申请。
+### 运行期偶发重启（R-30）
+`esp_hosted` 在流式接收模式下，每次中断按整批长度申请内部 DMA 内存，失败即 assert（串口可见 `assert failed: sdio_rx_get_buffer sdio_drv.c:953`）。因摄像头管线长期占用内部 DMA 内存，偶发碎片化时触发。
+
+处理方式：启动时预分配 2×8KB 接收缓冲（`sdio_rx_prealloc()`），分配失败时返回 NULL 由上层重试或丢弃，不再 assert。补丁位于 `managed_components/espressif__esp_hosted/host/drivers/transport/sdio/sdio_drv.c`，已随仓库提供；一旦组件被重新拉取会覆盖，需按 `docs/REPLICATION.md` 重打。另需避免开启 `CONFIG_ESP_HOSTED_SDIO_OPTIMIZATION_RX_NONE`，否则启动即断言。实测修复后 130 秒运行 0 次断言。
 
 ### MP3 播放重启
 `minimp3` 的解码 scratch 结构约 16KB 放在栈上，而播放任务栈只有 8KB，触发栈保护复位。处理方式：播放任务栈 8KB → 32KB；从非 LVGL 线程更新 UI 必须加 `lvgl_port_lock()`。
@@ -41,9 +43,9 @@ ST7123 会上报 5 个触点，而 LVGL 只取第 0 点，导致触摸点错位�
 ## 已知限制
 
 - 1080p 实测不可用，相机校准采用 640×640。
-- 冷启动偶发一次启动失败后自动重启（bootloader 阶段 WDT，频率低）。
+- 冷启动阶段偶发一次复位（复位发生在 bootloader、应用尚未执行），仅有两份同址样本，复现率未统计，尚未修复。
 - 导航 App 已冻结归档，桌面不再注册。
 - 在线音乐采用免 Key 网络电台；完整在线曲库需 OAuth 与会员权益，设备端未实现。
-- 助手侧自测通过不等于真机逐项验收；历史多轮功能的用户真机验收尚未全部完成。
+- 内部自测通过不等于真机逐项验收；历史多轮功能的真机逐项验收尚未全部完成。
 
-更多细节见 `docs/ESP32-P4C5_审计与稳定性报告_2026-11-19.md` 与各工程源码注释。
+更多细节见 `docs/ESP32-P4C5_审计与稳定性报告_2026-11-19.md`、`docs/ESP32-P4C5_复审报告_2026-11-21.md` 与各工程源码注释。

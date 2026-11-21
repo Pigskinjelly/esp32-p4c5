@@ -51,9 +51,9 @@
 
 **结论：所有构建一律从 bash 发起（`bash build.sh`），不要 `idf.py build`，不要在 PowerShell 里调 cmake。** 没有该驱动的机器不受影响，但仍建议沿用 bash 脚本以保持一致。
 
-## 3. 必须重打的补丁（原机仅在本机磁盘，不在 git 中）
+## 3. 构建相关补丁
 
-以下补丁整理自交接文档 §2.3。其中组件侧补丁已经随 `managed_components/` 入库，**IDF 工具链侧补丁（`ldgen.py` 等）不在仓库中，需要按下面说明重打**。仓库内另附 `docs/patches/README.md` 与提取出的 `ldgen.py` 片段供参考。
+下表汇总两类补丁：**组件侧补丁**已随 `managed_components/` 入库，无需重打（但重新拉取组件会覆盖）；**IDF 工具链侧补丁**（`ldgen.py` 等）需按说明在 ESP-IDF 安装目录中重打。仓库内另附 `docs/patches/README.md` 与提取出的 `ldgen.py` 片段供参考。
 
 | 位置 | 改动 | 作用 / 触发条件 |
 |---|---|---|
@@ -63,10 +63,13 @@
 | `managed_components/espressif__esp_video/.../esp_video_jpeg_device.c` | `timeout_ms = 40 → 300` | 1080p JPEG 编码（**已随仓库提供**） |
 | `managed_components/espressif__esp_wifi_remote/idf_v5.5/include/injected/esp_wifi_types_generic.h` | 补 `gtk_rekey_interval` 字段 | 否则 esp_hosted 编译失败（**已随仓库提供**） |
 | `managed_components/espressif__esp_lcd_touch_st7123/.../esp_lcd_touch_st7123.c` | 触点按面积降序 + 数组清零 + max_touches 保护 | 多点误触修复（**已随仓库提供**） |
+| `managed_components/espressif__esp_hosted/.../sdio/sdio_drv.c` | 启动时预分配 2×8KB 接收缓冲（`sdio_rx_prealloc()`）；分配失败时返回 NULL 由上层重试/丢弃，不再 assert | **关键补丁**：避免运行期偶发 panic 重启（详见 `docs/R-30-SDIO接收缓冲.md`）。**已随仓库提供**，组件被重新拉取会覆盖 |
 | `esp_lvgl_port_touch.c` | `ESP_ERROR_CHECK(read_data)` → 容错 | I2C 抖动不再 assert 重启 |
 | `espressif__esp_hosted/Kconfig`（audio-monitor 工程） | `$(ESP_IDF_VERSION) >= "6.1"` → `depends on n` | IDF 5.5.5 无法解析 6.x 宏（audio-monitor 历史问题） |
 
 > 标记"已随仓库提供"的补丁在 `managed_components/` 中已是修改后版本；`managed_components/` 由 ESP-IDF 组件管理器管理，重新 `idf.py reconfigure` 可能被覆盖，改动前先备份。
+>
+> **配置约束**：不要开启 `CONFIG_ESP_HOSTED_SDIO_OPTIMIZATION_RX_NONE`。该模式会在启动阶段触发 `process_init_event` 断言，导致反复重启。
 
 ## 4. 构建故障速查
 
