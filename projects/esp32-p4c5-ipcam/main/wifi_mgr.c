@@ -661,14 +661,9 @@ esp_err_t wifi_mgr_connect(const char *ssid, const char *password)
      * 覆盖成空串，设备从此永远 NO_AP_FOUND 且不会弹密码框。 */
     if (pass[0] == '\0') {
         const char *old = wifi_mgr_saved_pass(ssid);
-        bool enc = true;        /* 扫描结果里没有这条时按"加密"处理 */
-        for (int i = 0; i < s_ap_count; i++) {
-            if (strcmp(s_ap_cache[i].ssid, ssid) == 0) {
-                enc = (s_ap_cache[i].authmode != WIFI_AUTH_OPEN);
-                break;
-            }
-        }
-        if (old && old[0] != '\0' && enc) {
+        /* 只要旧密码非空就沿用，不去看扫描结果的 authmode：
+         * 那个值在"扫描还没回来"时是未知的，用它判断会把加密网络误当开放。 */
+        if (old && old[0] != '\0') {
             strlcpy(pass, old, sizeof(pass));
             ESP_LOGW(TAG, "empty password for \"%s\", keep saved one (len=%d)",
                      ssid, (int)strlen(pass));

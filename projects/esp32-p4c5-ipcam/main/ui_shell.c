@@ -860,7 +860,9 @@ static void cc_ap_row_click_cb(lv_event_t *e)
         ui_shell_toast("已连接到该网络");
         return;
     }
-    if (s_row_auth[idx] == WIFI_AUTH_OPEN) {
+    /* 只有「确认是开放网络」才用空密码；0xFF(未知) 落到下面走"用已保存密码
+     * 或弹密码框"，绝不会把已保存的密码清空。 */
+    if (s_row_auth[idx] == (uint8_t)WIFI_AUTH_OPEN) {
         wifi_mgr_connect(ssid, "");
         ui_shell_toast("正在连接…");
         return;
@@ -909,8 +911,12 @@ static void ap_add_row(const char *ssid, int rssi, bool saved, bool connected)
     }
     int idx = s_row_cnt++;
     strlcpy(s_row_ssid[idx], ssid, sizeof(s_row_ssid[idx]));
-    s_row_auth[idx] = 0;
-    /* 从扫描结果里找 authmode */
+    /* R-41：默认值必须用「未知」(0xFF)，不能用 0。
+     * 0 是 WIFI_AUTH_OPEN，而"已保存的网络"这一行不依赖扫描结果——刚开机
+     * 还没扫完时查不到 authmode，就会保持 0 被当成开放网络；用户点一下
+     * 就会用空密码去连，cred_put() 把 NVS 里的原密码覆盖成空串，
+     * 从此永远 NO_AP_FOUND 并且不再弹密码框。 */
+    s_row_auth[idx] = 0xFF;
     wifi_mgr_ap_info_t aps[16];
     int n = wifi_mgr_get_scan_results(aps, 16);
     for (int k = 0; k < n; k++) {
