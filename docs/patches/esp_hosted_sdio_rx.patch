@@ -1,0 +1,355 @@
+--- a/sdio_drv.c
++++ b/sdio_drv.c
+@@ -89,6 +89,7 @@
+ #include "port_esp_hosted_host_config.h"
+ #include "esp_hosted_event.h"
+ 
++#include "esp_heap_caps.h"   /* 本地补丁 R-30：分配失败时打印内部堆余量 */
+ #include "mempool.h"
+ #include "transport_util.h"
+ 
+@@ -256,6 +257,29 @@
+ #endif
+ }
+ 
++/* 【本地补丁 R-30】开机就把流式接收的两块缓冲分配好。
++ * 运行期（摄像头/PPA/编码把内部 DMA 内存占满时）再 malloc 会失败，
++ * 原来直接 assert 重启；现在预分配 + 失败兜底（见 sdio_read_task）。 */
++#define SDIO_RX_PREALLOC_BYTES (8 * 1024)
++
++static void sdio_rx_prealloc(void)
++{
++	for (int i = 0; i < 2; i++) {
++		if (double_buf.buffer[i].buf) {
++			continue;
++		}
++		uint8_t *p = (uint8_t *)g_h.funcs->_h_malloc_align(SDIO_RX_PREALLOC_BYTES,
++		                                                  HOSTED_MEM_ALIGNMENT_64);
++		if (!p) {
++			ESP_LOGW(TAG, "rx prealloc failed (buffer %d)", i);
++			return;
++		}
++		double_buf.buffer[i].buf = p;
++		double_buf.buffer[i].buf_size = SDIO_RX_PREALLOC_BYTES;
++	}
++	ESP_LOGI(TAG, "rx buffers preallocated: 2 x %d B", SDIO_RX_PREALLOC_BYTES);
++}
++
+ static inline void sdio_mempool_destroy(void)
+ {
+ #if H_USE_MEMPOOL
+@@ -949,8 +973,20 @@
+ 			// free already allocated memory
+ 			g_h.funcs->_h_free_align(*buf);
+ 		}
+-		*buf = (uint8_t *)g_h.funcs->_h_malloc_align(len, HOSTED_MEM_ALIGNMENT_64);
+-		assert(*buf);
++		for (int try = 0; try < 3 && !*buf; try++) {
++			*buf = (uint8_t *)g_h.funcs->_h_malloc_align(len, HOSTED_MEM_ALIGNMENT_64);
++			if (!*buf) {
++				vTaskDelay(pdMS_TO_TICKS(5));
++			}
++		}
++		if (!*buf) {
++			/* 【本地补丁 R-30】摄像头管线会把内部 DMA 堆占满，这里原本
++			 * assert 直接 panic 重启。改成返回 NULL，由调用方稍后重试：
++			 * 数据仍在从机队列里，不会丢。 */
++			ESP_LOGW(TAG, "rx buf alloc failed: %ld B (free int=%u)",
++			         (long)len, (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
++			return NULL;
++		}
+ 		double_buf.buffer[index].buf_size = len;
+ 		ESP_LOGD(TAG, "buf %d size: %ld", index, double_buf.buffer[index].buf_size);
+ 	}
+@@ -981,8 +1017,281 @@
+ 			return ESP_FAIL;
+ 		}
+ 		/* Allocate rx buffer */
++		pkt_rxbuff = sdio_buffer_alloc(MEMSET_REQUIRED);
++		if (!pkt_rxbuff) {
++			if (!mempool_oom_logged) {
++				ESP_LOGW(TAG, "mempool OOM start (RX)");
++				mempool_oom_logged = true;
++			}
++			/* Skip this packet and continue processing remaining stream data */
++			packet_size = len + offset;
++			if (packet_size > buf_len) {
++				return ESP_FAIL;
++			}
++			buf_len -= packet_size;
++			buf     += packet_size;
++			continue;
++		}
++
++		if (mempool_oom_logged) {
++			ESP_LOGW(TAG, "mempool OOM end");
++			mempool_oom_logged = false;
++		}
++
++		packet_size = len + offset;
++		if (packet_size > buf_len) {
++			ESP_LOGE(TAG, "packet size[%lu]>[%lu] too big for remaining stream data",
++					packet_size, buf_len);
++			sdio_buffer_free(pkt_rxbuff);
++			return ESP_FAIL;
++		}
++		memcpy(pkt_rxbuff, buf, packet_size);
++
++		if (sdio_push_pkt_to_queue(pkt_rxbuff, len, offset)) {
++			ESP_LOGI(TAG, "Failed to push a packet to queue from stream");
++		}
++
++		// move to the next packet in the stream
++		buf_len -= packet_size;
++		buf     += packet_size;
++	} while (buf_len);
++
++	return ESP_OK;
++}
++#endif
++
++// double buffer task to transfer data from the current buffer to the queue
++static void sdio_data_to_rx_buf_task(void const* pvParameters)
++{
++	uint8_t * buf;
++	uint32_t len;
++
++	ESP_LOGI(TAG, "sdio_data_to_rx_buf_task started");
++
++	while (1) {
++		g_h.funcs->_h_get_semaphore(sem_double_buf_xfer_data, HOSTED_BLOCK_MAX);
++
++		if (double_buf.read_index < 0) {
++			ESP_LOGE(TAG, "invalid double buf read_index");
++			continue;
++		}
++
++		buf = double_buf.buffer[double_buf.read_index].buf;
++		len = double_buf.read_data_len;
++
++		if (sdio_push_data_to_queue(buf, len))
++			ESP_LOGE(TAG, "Failed to push data to rx queue");
++
++		// finished sending data: reset read_index
++		double_buf.read_index = -1;
++	}
++}
++
++
++#if H_HOST_USES_STATIC_NETIF
++esp_netif_t *s_netif_sta = NULL;
++
++esp_netif_t * create_sta_netif_with_static_ip(void)
++{
++	ESP_LOGI(TAG, "Create netif with static IP");
++	/* Create "almost" default station, but with un-flagged DHCP client */
++	esp_netif_inherent_config_t netif_cfg;
++	memcpy(&netif_cfg, ESP_NETIF_BASE_DEFAULT_WIFI_STA, sizeof(netif_cfg));
++	netif_cfg.flags &= ~ESP_NETIF_DHCP_CLIENT;
++	esp_netif_config_t cfg_sta = {
++		.base = &netif_cfg,
++		.stack = ESP_NETIF_NETSTACK_DEFAULT_WIFI_STA,
++	};
++	esp_netif_t *sta_netif = esp_netif_new(&cfg_sta);
++	assert(sta_netif);
++
++	ESP_LOGI(TAG, "Creating slave sta netif with static IP");
++
++	ESP_ERROR_CHECK(esp_netif_attach_wifi_station(sta_netif));
++	ESP_ERROR_CHECK(esp_wifi_set_default_wifi_sta_handlers());
++
++	/* stop dhcpc */
++	ESP_ERROR_CHECK(esp_netif_dhcpc_stop(sta_netif));
++
++	return sta_netif;
++}
++
++static esp_err_t create_static_netif(void)
++{
++	/* Only initialize networking stack if not already initialized */
++	if (!s_netif_sta) {
++		esp_netif_init();
++		esp_event_loop_create_default();
++		s_netif_sta = create_sta_netif_with_static_ip();
++		assert(s_netif_sta);
++	}
++	return ESP_OK;
++}
++#endif
++
++static void sdio_read_task(void const* pvParameters)
++{
++	esp_err_t res = ESP_OK;
++	uint8_t *rxbuff = NULL;
++	int ret;
++	uint32_t len_from_slave;
++
++	uint32_t data_left;
++	uint32_t len_to_read;
++	uint8_t *pos;
++	uint32_t interrupts;
++
++#if DO_COMBINED_REG_READ
++	uint32_t *intr_index = NULL;
++#endif
++
++	assert(sdio_handle);
++
++	// wait for transport to be in reset state
++	while (true) {
++		g_h.funcs->_h_msleep(100);
++		if (is_transport_rx_ready()) {
++			break;
++		}
++	}
++#if H_HOST_USES_STATIC_NETIF
++	create_static_netif();
++#endif
++
++
++#if DO_COMBINED_REG_READ
++    if (!reg_buf) {
++	    reg_buf = g_h.funcs->_h_malloc_align(REG_BUF_LEN, HOSTED_MEM_ALIGNMENT_64);
++	    assert(reg_buf);
++    }
++#endif
++
++	// display which SDIO mode we are operating in
++#if H_SDIO_HOST_RX_MODE == H_SDIO_HOST_STREAMING_MODE
++	ESP_LOGI(TAG, "SDIO Host operating in STREAMING MODE");
++#else
++	ESP_LOGI(TAG, "SDIO Host operating in PACKET MODE");
++#endif
++
++	ESP_LOGI(TAG, "Open data path at slave");
++
++
++	sdio_generate_slave_intr(ESP_OPEN_DATA_PATH);
++
++	for (;;) {
++
++		// wait for sdio interrupt from slave
++		/* call will block until there is an interrupt, timeout or error */
++		ESP_LOGD(TAG, "--- Wait for SDIO intr ---");
++		res = g_h.funcs->_h_sdio_wait_slave_intr(sdio_handle, HOSTED_BLOCK_MAX);
++		ESP_LOGD(TAG, "--- SDIO intr received ---");
++
++		if (res != ESP_OK) {
++			ESP_LOGE(TAG, "wait_slave_intr error: %d", res);
++			continue;
++		}
++
++		SDIO_DRV_LOCK();
++
++#if DO_COMBINED_REG_READ
++		if (sdio_read_regs(reg_buf)) {
++			ESP_LOGE(TAG, "failed to read registers");
++
++			SDIO_DRV_UNLOCK();
++			g_h.funcs->_h_event_post(ESP_HOSTED_EVENT,
++					ESP_HOSTED_EVENT_TRANSPORT_FAILURE,
++					NULL, 0, HOSTED_BLOCK_MAX);
++#if H_TRANSPORT_RESTART_ON_FAILURE
++			ESP_LOGI(TAG, "Host is resetting itself, to avoid any sdio race condition");
++			g_h.funcs->_h_restart_host();
++#endif
++			continue;
++		}
++
++		intr_index = (uint32_t *)&reg_buf[INT_RAW_INDEX];
++		interrupts = *intr_index;
++#else
++		// clear slave interrupts
++		if (sdio_get_intr(&interrupts)) {
++			ESP_LOGE(TAG, "failed to read interrupt register");
++
++			SDIO_DRV_UNLOCK();
++			g_h.funcs->_h_event_post(ESP_HOSTED_EVENT,
++					ESP_HOSTED_EVENT_TRANSPORT_FAILURE,
++					NULL, 0, HOSTED_BLOCK_MAX);
++#if H_TRANSPORT_RESTART_ON_FAILURE
++			ESP_LOGI(TAG, "Host is resetting itself, to avoid any sdio race condition");
++			g_h.funcs->_h_restart_host();
++#endif
++			continue;
++		}
++#endif
++		sdio_clear_intr(interrupts);
++
++		ESP_LOGV(TAG, "Intr: %08"PRIX32, interrupts);
++
++		/* Check all supported interrupts */
++		if (BIT(SDIO_INT_START_THROTTLE) & interrupts)
++			wifi_tx_throttling = 1;
++
++		if (BIT(SDIO_INT_STOP_THROTTLE) & interrupts)
++			wifi_tx_throttling = 0;
++
++		if (!(BIT(SDIO_INT_NEW_PACKET) & interrupts)) {
++
++			SDIO_DRV_UNLOCK();
++			continue;
++		}
++
++#if H_SDIO_HOST_RX_MODE == H_SDIO_ALWAYS_HOST_RX_MAX_TRANSPORT_SIZE
++		/* Bypass the check to find the bytes to be read from slave to host
++		 * always assume max transport size to be read.
++		 * slave sdio driver will automatically pad the remaining bytes after
++		 * actual written bytes till requested size from host
++		 * This typically improves throughput for larger packet sizes
++		 **/
++		len_from_slave = MAX_TRANSPORT_BUFFER_SIZE;
++#else
++		/* check the length to be read */
++#if DO_COMBINED_REG_READ
++		uint32_t *read_len_index = (uint32_t *)&reg_buf[PACKET_LEN_INDEX];
++		ret = sdio_get_len_from_slave(&len_from_slave, *read_len_index, ACQUIRE_LOCK);
++#else
++		ret = sdio_get_len_from_slave(&len_from_slave, ACQUIRE_LOCK);
++#endif
++		if (ret || !len_from_slave) {
++			ESP_LOGW(TAG, "invalid ret or len_from_slave: %d %ld", ret, len_from_slave);
++
++			SDIO_DRV_UNLOCK();
++			continue;
++		} else {
++			ESP_LOGD(TAG, "len_from_slave: %ld", len_from_slave);
++		}
++#endif
++
++		/* Allocate rx buffer */
+ 		rxbuff = sdio_rx_get_buffer(len_from_slave);
+-		assert(rxbuff);
++		if (!rxbuff) {
++			/* 【本地补丁 R-30】内部 DMA 内存暂时不够（摄像头占满）。
++			 * 不能直接跳过：长度寄存器已经被取走，不把数据读掉会让整条
++			 * 流错位、Wi-Fi 全挂。这里用小栈缓冲把这一批读掉丢弃，
++			 * 丢的是几个 TCP 包，协议栈会重传；机器不会重启。 */
++			uint8_t sink[512];
++			uint32_t total = (len_from_slave + 511u) & ~511u;   /* 512 对齐 */
++			uint32_t done = 0;
++			while (done < total) {
++				uint32_t n = (total - done > sizeof(sink)) ? sizeof(sink) : (total - done);
++				if (g_h.funcs->_h_sdio_read_block(sdio_handle,
++						ESP_SLAVE_CMD53_END_ADDR - (len_from_slave - done),
++						sink, n, ACQUIRE_LOCK)) {
++					break;
++				}
++				done += n;
++			}
++			SDIO_DRV_UNLOCK();
++			ESP_LOGW(TAG, "rx dropped %ld B (alloc failed)", (long)len_from_slave);
++			continue;
++		}
+ 
+ 		data_left = len_from_slave;
+ 		pos = rxbuff;
+@@ -1221,6 +1530,8 @@
+ 	double_buf.read_index = -1; // indicates we are not reading anything
+ 	double_buf.write_index = 0; // we will write into the first buffer
+ 
++	sdio_rx_prealloc();      /* R-30：double_buf 清零之后预分配 */
++
+ 	sem_double_buf_xfer_data = g_h.funcs->_h_create_semaphore(1);
+ 	assert(sem_double_buf_xfer_data);
+ 	g_h.funcs->_h_get_semaphore(sem_double_buf_xfer_data, 0);

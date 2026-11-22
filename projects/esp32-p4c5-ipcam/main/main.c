@@ -551,6 +551,25 @@ static void map_selftest_task(void *arg)
 
 /* ---- 临时自测：反复开关「交易」个股详情页（验证不再重启）
  * 平时置 0；改 1 重编译即可自动压测 12 轮。 ---- */
+/* ---- 临时自测：开机自动打开天气 App，验证动态背景与排版不崩 ---- */
+#define WX_UI_TEST 0
+#if WX_UI_TEST
+static void wx_ui_test_task(void *arg)
+{
+    (void)arg;
+    vTaskDelay(pdMS_TO_TICKS(32000));
+    ESP_LOGI("wx_test", "open weather app (app idx 5)");
+    lvgl_port_lock(0);
+    ui_shell_open_app(5);
+    lvgl_port_unlock();
+    vTaskDelay(pdMS_TO_TICKS(28000));
+    ESP_LOGI("wx_test", "done, heap_int=%u KB heap_min=%u KB",
+             (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
+             (unsigned)(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024));
+    vTaskDelete(NULL);
+}
+#endif
+
 #define STK_SELFTEST 0
 #if STK_SELFTEST
 /* 交易 App 自测：指数K线(日/周/月/年) → 切美股 → 美股指数+个股K线 */
@@ -871,6 +890,10 @@ void app_main(void)
     xTaskCreate(storage_task, "storage", 4096, NULL, 3, NULL);
 
     xTaskCreate(heartbeat_task, "heartbeat", 3072, touch ? (void *)1 : NULL, 3, NULL);
+
+#if WX_UI_TEST
+    xTaskCreate(wx_ui_test_task, "wx_test", 4096, NULL, 2, NULL);
+#endif
 
 #if MAP_SELFTEST
     xTaskCreate(map_selftest_task, "map_test", 16384, NULL, 2, NULL);

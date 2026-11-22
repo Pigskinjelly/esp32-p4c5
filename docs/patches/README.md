@@ -6,6 +6,7 @@
 
 | 文件 | 对应原位置（ESP-IDF v5.5.5） | 说明 |
 |---|---|---|
+| `esp_hosted_sdio_rx.patch` | `managed_components/espressif__esp_hosted/host/drivers/transport/sdio/sdio_drv.c` | **运行期偶发 panic 重启的根因补丁**：①开机预分配 2×8KB 流式接收缓冲（`sdio_rx_prealloc()`，位置在 `memset(&double_buf,...)` 之后）；②`sdio_rx_get_buffer()` 分配失败先重试 3 次，仍失败返回 NULL 不再 `assert`；③调用处用 512B 对齐的栈缓冲把这一批数据读掉丢弃，保持 SDIO 流同步。用 `git apply` 打到组件同名文件即可（前提：组件未升级）。 |
 | `ldgen.py.patched` | `tools/ldgen/ldgen.py` | 已打补丁的完整文件：`_objdump_sections()` 用 cmd 重定向/管道/直调三种方式轮询 objdump，校验 `In archive`/`Sections:` 且连续两次一致才接受，12 次重试、每次 `timeout=20`。**复刻时用它替换 IDF 中的同名文件**（IDF 路径如 `$IDF_PATH/tools/ldgen/ldgen.py`）。 |
 
 ## 未在仓库中留档的补丁

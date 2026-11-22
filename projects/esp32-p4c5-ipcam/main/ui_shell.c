@@ -1853,6 +1853,33 @@ static void app_off_load(void)
         }
         nvs_close(h);
     }
+    /* R-33：地图 App 冻结后注册顺序变短了一位（旧：…3交易 4导航 5音乐 6天气 7设置），
+     * 开关是按索引位图存的，不迁移会出现"关了导航，升级后关掉的是音乐"。
+     * 这里按老顺序重映射一次：bit4(导航) 丢弃，5→4、6→5、7→6。 */
+    {
+        nvs_handle_t hv;
+        uint8_t ver = 0;
+        bool need = false;
+        if (nvs_open(NVS_NS_SYS, NVS_READWRITE, &hv) == ESP_OK) {
+            if (nvs_get_u8(hv, "app_off_ver", &ver) != ESP_OK || ver < 2) {
+                need = true;
+            }
+            if (need) {
+                uint32_t old_off = s_app_off, old_bg = s_app_bg;
+                s_app_off = (old_off & 0x0F) | ((old_off >> 1) & 0x70);
+                s_app_bg  = (old_bg  & 0x0F) | ((old_bg  >> 1) & 0x70);
+                nvs_set_u8(hv, "app_off_ver", 2);
+                nvs_set_i32(hv, NVS_KEY_APP, (int32_t)s_app_off);
+                nvs_set_i32(hv, NVS_KEY_BG, (int32_t)s_app_bg);
+                nvs_commit(hv);
+                ESP_LOGW(TAG, "app mask migrated(v2): off 0x%02lx->0x%02lx bg 0x%02lx->0x%02lx",
+                         (unsigned long)old_off, (unsigned long)s_app_off,
+                         (unsigned long)old_bg, (unsigned long)s_app_bg);
+            }
+            nvs_close(hv);
+        }
+    }
+
     ESP_LOGI(TAG, "app switch mask = 0x%02lx, bg mask = 0x%02lx",
              (unsigned long)s_app_off, (unsigned long)s_app_bg);
     s_app_shutting = false;

@@ -54,37 +54,31 @@ components/esp_lcd_st7102/   厂商屏驱动
 经实测，**进程树的根决定是否被加密**：由 `bash.exe` 或 `cmd.exe` 启动的 gcc/ar 产物是明文，
 由 `powershell.exe` 启动的会被加密。因此构建必须从 bash 发起。
 
-### 首次配置（PowerShell，只需一次）
-
-```powershell
-$env:IDF_PYTHON_ENV_PATH = "D:\Espressif\python_env\idf5.5_py3.11_env"
-$env:IDF_SKIP_TRY_COMPILE = "1"      # 跳过 CMake try_compile（DLP 下清理临时目录必失败）
-. "D:\Espressif\frameworks\esp-idf-v5.5.5\export.ps1"
-$env:IDF_CCACHE_ENABLE = "0"
-$env:CCACHE_DISABLE = "1"
-$env:TMP = "D:\idftmp"; $env:TEMP = "D:\idftmp"
-$env:PATH = "D:\Espressif\python_env\idf5.5_py3.11_env\Scripts;" + $env:PATH
-cd <用户目录>\Desktop\ESP32-P4C5\esp32-p4c5-ipcam
-idf.py -B D:\p4c5build -DCMAKE_C_FLAGS=-pipe -DCMAKE_ASM_FLAGS=-pipe `
-       -DCMAKE_C_COMPILER_WORKS=TRUE -DCMAKE_CXX_COMPILER_WORKS=TRUE `
-       -DCMAKE_C_ABI_COMPILED=TRUE -DCMAKE_CXX_ABI_COMPILED=TRUE -DCMAKE_ASM_ABI_COMPILED=TRUE `
-       set-target esp32p4
-```
-
-### 日常构建（bash）
+### 首次构建（bash，一条命令）
 
 ```bash
-bash build.sh          # 等价于在 D:\p4c5build 下执行 cmake --build .
+cd <用户目录>/Desktop/ESP32-P4C5/projects/esp32-p4c5-ipcam
+bash build.sh cfg     # 配置（首次、或改了 sdkconfig 之后跑一次）
+bash build.sh         # 增量构建
+bash build.sh clean   # 清掉构建目录重来
+bash flash.sh COM19   # 烧写
 ```
 
-### 烧录
+`build.sh` 已经把下面这些环境变量都设好了，正常不需要手工 export：
 
-```bash
-bash flash.sh COM19
-```
+| 变量 | 默认值 | 作用 / 为什么要设 |
+|---|---|---|
+| `BUILD_DIR` | `/d/p4c5b2` | 构建目录；只在想并行保留多份构建时才需要改 |
+| `IDF_PATH` | `/d/Espressif/frameworks/esp-idf-v5.5.5` | ESP-IDF 安装路径，按本机实际改 |
+| `IDF_PY_ENV` | `/d/Espressif/python_env/idf5.5_py3.11_env` | IDF 自带 Python 虚拟环境（本机 python3 是 3.13，不能用） |
+| `TMPDIR_IDF` | `/d/idftmp` | 编译临时目录（放在文档加密驱动的监控范围外） |
+| `ESP_IDF_VERSION` | `5.5` | **必须是 `5.5`**，不能写 5.5.5（原因见补丁表） |
 
-> 若 `libriscv.a` 等静态库报 `file format not recognized`，说明它们是被 PowerShell 那次构建污染的，
-> 执行 `find /d/p4c5build -name "*.a" -delete` 后重新构建即可（bash 链会重新打包为明文）。
+> 换机器时：**只用 `bash build.sh`，不要 `idf.py build`，也不要在 Windows 终端里调 cmake**
+> —— 那类进程树产出的目标文件会被文档加密驱动污染，gcc 报 `junk at end of line`。
+>
+> 若构建目录是从旧版本沿用的（源码路径变过），会报
+> `CMakeCache ... does not match the source ...`，执行 `bash build.sh clean` 即可。
 
 ### 本机对 ESP-IDF 的三处补丁（已应用）
 

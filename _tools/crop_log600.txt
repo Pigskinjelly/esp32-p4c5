@@ -1,0 +1,10 @@
+size 7017x4959
+j4_full box=(2555, 164, 3341, 1412) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\j4_full.png (786, 1248)
+j2_full box=(2555, 1280, 3341, 2331) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\j2_full.png (786, 1051)
+cell_u4 box=(65, 131, 1965, 1445) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\cell_u4.png (1900, 1314)
+power_left box=(3636, 131, 5241, 1379) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\power_left.png (1605, 1248)
+typec1 box=(1965, 2495, 3144, 3743) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\typec1.png (1179, 1248)
+typec2 box=(1834, 3678, 3079, 4860) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\typec2.png (1245, 1182)
+buck_typec box=(3636, 2463, 5241, 3087) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\buck_typec.png (1605, 624)
+usbhost box=(3275, 3645, 4717, 4860) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\usbhost.png (1442, 1215)
+audio_pmic box=(4586, 3021, 6617, 4860) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops600\audio_pmic.png (2031, 1839)

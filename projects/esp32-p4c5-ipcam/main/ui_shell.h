@@ -67,7 +67,7 @@ bool        ui_shell_lock_ready(void);
 /** App 顶栏返回按钮的事件回调（ui_theme 使用） */
 void ui_shell_back_event_cb(lv_event_t *e);
 
-/** 调试用：按索引打开 App（0=监控 1=相机 2=相册 3=交易 4=导航 5=天气 6=设置） */
+/** 调试用：按索引打开 App（0=监控 1=相机 2=相册 3=交易 4=音乐 5=天气 6=设置） */
 void ui_shell_open_app(int idx);
 
 /** 顶部浮动提示（1.6 秒自动消失，任意线程禁止——仅 LVGL 上下文调用） */

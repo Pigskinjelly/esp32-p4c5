@@ -1,0 +1,8 @@
+size 1684x1190
+j4 box=(628, 47, 786, 330) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops\j4.png (316, 566)
+j2 box=(628, 315, 786, 551) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops\j2.png (316, 472)
+top_left_power box=(31, 31, 471, 315) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops\top_left_power.png (880, 568)
+power_mid box=(880, 31, 1257, 315) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops\power_mid.png (754, 568)
+usbc_blk box=(471, 598, 723, 882) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops\usbc_blk.png (504, 568)
+typec_sw box=(849, 882, 1100, 1166) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops\typec_sw.png (502, 568)
+buck box=(880, 598, 1257, 740) -> <用户目录>\Desktop\ESP32-P4C5\_tools\crops\buck.png (754, 284)

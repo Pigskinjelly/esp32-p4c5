@@ -386,6 +386,23 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
                 info->channel = recs[i].primary;
             }
             ESP_LOGI(TAG, "scan done: %d unique AP(s)", s_ap_count);
+
+            /* 目标网络不在扫描结果里时，把扫到的都打出来：
+             * 现场一看就知道是"路由器没开/改名/换频段"还是"固件扫不到"。 */
+            bool found = (s_ssid[0] == '\0');
+            for (int i = 0; i < s_ap_count; i++) {
+                if (s_ssid[0] && strcmp(s_ap_cache[i].ssid, s_ssid) == 0) {
+                    found = true;
+                }
+            }
+            if (!found) {
+                ESP_LOGW(TAG, "\"%s\" NOT in scan result, visible APs:", s_ssid);
+                for (int i = 0; i < s_ap_count && i < 10; i++) {
+                    ESP_LOGW(TAG, "  [%d] \"%s\" ch=%d rssi=%d auth=%d",
+                             i, s_ap_cache[i].ssid, s_ap_cache[i].channel,
+                             s_ap_cache[i].rssi, (int)s_ap_cache[i].authmode);
+                }
+            }
         }
         free(recs);
         s_last_scan_ms = esp_timer_get_time() / 1000;
@@ -442,6 +459,13 @@ esp_err_t wifi_mgr_init(void)
         return ret;
     }
 
+    /* 国家码 CN：默认是 "01"(world safe)，只允许 1~11 信道；
+     * 路由器在 12/13 信道时会出现"扫描看不到 / 重连 NO_AP_FOUND(reason 201/210)"。 */
+    {
+        esp_err_t cerr = esp_wifi_set_country_code("CN", true);
+        ESP_LOGI(TAG, "country code CN: %s", esp_err_to_name(cerr));
+    }
+
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
                                                         wifi_event_handler, NULL, NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID,
@@ -473,6 +497,19 @@ esp_err_t wifi_mgr_init(void)
     }
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+
+    /* C5 是双频芯片，但默认只按 2.4G 扫描；路由器是 5G-only 时会一直 NO_AP_FOUND。
+     * 设成 AUTO（2.4G + 5G），两种频段都能扫到/连上。 */
+    {
+        esp_err_t berr = esp_wifi_set_band_mode(WIFI_BAND_MODE_AUTO);
+        if (berr == ESP_OK) {
+            ESP_LOGI(TAG, "band mode: 2.4G + 5G");
+        } else {
+            ESP_LOGW(TAG, "set band mode auto failed: %s（继续按默认频段）",
+                     esp_err_to_name(berr));
+        }
+    }
+
     apply_wifi_config(ssid, pass);
     /* 监控场景不希望省电导致丢包/高延迟 */
     esp_wifi_set_ps(WIFI_PS_NONE);

@@ -1,0 +1,12 @@
+object_79.model  nverts=7451
+   X -12.50..12.50  size 25.00
+   Y -4.70..4.70  size 9.40
+   Z -6.25..6.25  size 12.50
+object_80.model  nverts=8591
+   X -42.45..42.45  size 84.90
+   Y -10.75..10.75  size 21.50
+   Z -41.50..41.50  size 83.00
+object_81.model  nverts=880
+   X -43.05..43.05  size 86.10
+   Y -6.25..6.25  size 12.50
+   Z -43.05..43.05  size 86.10

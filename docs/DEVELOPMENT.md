@@ -40,10 +40,22 @@ ST7123 会上报 5 个触点，而 LVGL 只取第 0 点，导致触摸点错位�
 ### K 线长竖线
 行情接口返回的 `low` 字段为 3 个字母时发生偏移，导致 8.93 被读成 0.93、影线画满画布。处理方式：按键名查找并跳过引号/空格后再转换，增加顺序与脏数据校验。
 
+## R-01（冷启动偶发复位）的诊断方法
+
+不要指望 backtrace。按下面顺序取证：
+
+1. `CONFIG_BOOTLOADER_LOG_LEVEL` 调到 Debug/Verbose，跑 20 次冷启动（拔插电源，不用复位键），
+   记录每次都崩在 `esp_image` / PSRAM 初始化 / flash 探测 的哪一步；
+2. A/B 变量：`CONFIG_SPIRAM_SPEED_200M` → 120M、flash 80MHz → 40MHz，各 20 次；
+3. 每次记 `rst:0x` 序列 + 供电方式（USB 口 / 独立电源 / 电池板），看是否与供电有关；
+4. 仍无规律时用 `esptool --before no_reset` 配合逻辑分析仪看 CHIP_PU 与 3V3 跌落。
+
 ## 已知限制
 
 - 1080p 实测不可用，相机校准采用 640×640。
 - 冷启动阶段偶发一次复位（复位发生在 bootloader、应用尚未执行），仅有两份同址样本，复现率未统计，尚未修复。
+  **注意：这类崩溃不能用 `Backtrace:` 定位** —— `CONFIG_ESP_SYSTEM_NO_BACKTRACE` / `USE_FRAME_POINTER`
+  只作用于 app 的 panic，bootloader 阶段由 ROM 自己处理，只会给寄存器 + Stack。正确做法见下条。
 - 导航 App 已冻结归档，桌面不再注册。
 - 在线音乐采用免 Key 网络电台；完整在线曲库需 OAuth 与会员权益，设备端未实现。
 - 内部自测通过不等于真机逐项验收；历史多轮功能的真机逐项验收尚未全部完成。
