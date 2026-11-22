@@ -61,6 +61,7 @@ typedef struct {
     bool  valid;
     float temp;
     float feels;
+    int   aqi;               /* 美标 AQI，0 = 未知 */
     int   humidity;
     float wind;
     int   code;
@@ -125,6 +126,7 @@ static void parse_json(const char *body)
     }
 
     weather_t wx = { 0 };
+    wx.aqi = s_wx.aqi;          /* 空气质量是另一个接口，先沿用上次的值 */
     cJSON *cur = cJSON_GetObjectItem(root, "current");
     if (cur) {
         cJSON *it;
@@ -267,6 +269,51 @@ static void fetch_task(void *arg)
             }
             esp_http_client_close(client);
             esp_http_client_cleanup(client);
+        }
+        /* 空气质量（可选）：拿不到就保持 --，不影响主流程 */
+        if (s_wx.valid) {
+            char aurl[256];
+            snprintf(aurl, sizeof(aurl),
+                     "https://air-quality-api.open-meteo.com/v1/air-quality"
+                     "?latitude=%.4f&longitude=%.4f&current=us_aqi"
+                     "&timezone=Asia%%2FShanghai",
+                     s_cities[s_city_idx].lat, s_cities[s_city_idx].lon);
+            esp_http_client_config_t acfg = {
+                .url = aurl,
+                .timeout_ms = 8000,
+                .buffer_size = 1024,
+                .user_agent = "ESP32-P4C5-Weather/1.0",
+                .crt_bundle_attach = esp_crt_bundle_attach,
+            };
+            esp_http_client_handle_t ac = esp_http_client_init(&acfg);
+            if (ac) {
+                static char ab[1024];
+                int an = 0;
+                if (esp_http_client_open(ac, 0) == ESP_OK) {
+                    esp_http_client_fetch_headers(ac);
+                    if (esp_http_client_get_status_code(ac) == 200) {
+                        while (an < (int)sizeof(ab) - 1) {
+                            int r = esp_http_client_read(ac, ab + an, sizeof(ab) - 1 - an);
+                            if (r <= 0) break;
+                            an += r;
+                        }
+                        ab[an] = '\0';
+                        cJSON *root = cJSON_Parse(ab);
+                        if (root) {
+                            cJSON *cur = cJSON_GetObjectItem(root, "current");
+                            cJSON *aq = cur ? cJSON_GetObjectItem(cur, "us_aqi") : NULL;
+                            if (aq && cJSON_IsNumber(aq)) {
+                                s_wx.aqi = aq->valueint;
+                                s_dirty = true;
+                                ESP_LOGI(TAG, "aqi=%d", s_wx.aqi);
+                            }
+                            cJSON_Delete(root);
+                        }
+                    }
+                }
+                esp_http_client_close(ac);
+                esp_http_client_cleanup(ac);
+            }
         }
         s_busy = false;
     }
@@ -538,6 +585,7 @@ static lv_obj_t *s_root;
 static lv_obj_t *s_lbl_city;
 static lv_obj_t *s_lbl_updated;
 static lv_obj_t *s_lbl_temp;
+static lv_obj_t *s_neg;          /* 负号（96px 字体里没有 '-') */
 static lv_obj_t *s_lbl_desc;
 static lv_obj_t *s_lbl_feels;
 static lv_obj_t *s_lbl_aqi;
@@ -619,6 +667,19 @@ static void apply_ui(void)
     char b[32];
     snprintf(b, sizeof(b), "%.0f", s_wx.temp);
     lv_label_set_text(s_lbl_temp, b);
+
+    /* 负温度：96px 字体没有 '-'，用一根小横杠补上，并把数字右移 */
+    if (s_wx.temp < -0.4f) {
+        if (s_neg) {
+            lv_obj_remove_flag(s_neg, LV_OBJ_FLAG_HIDDEN);
+        }
+        lv_obj_set_pos(s_lbl_temp, 40, 66);
+    } else {
+        if (s_neg) {
+            lv_obj_add_flag(s_neg, LV_OBJ_FLAG_HIDDEN);
+        }
+        lv_obj_set_pos(s_lbl_temp, 12, 66);
+    }
     lv_label_set_text(s_lbl_desc, wmo_text(s_wx.code));
     snprintf(b, sizeof(b), "%s 更新", s_wx.updated);
     lv_label_set_text(s_lbl_updated, b);
@@ -627,7 +688,13 @@ static void apply_ui(void)
     lv_label_set_text(s_lbl_feels, b);
     /* 参考图里是 AQI + 等级；接口没有空气质量，这里用湿度替代会串味，
      * 所以按"湿度/AQI"两行分别显示真实数据 */
-    snprintf(b, sizeof(b), "AQI --");
+    if (s_wx.aqi > 0) {
+        const char *lv = (s_wx.aqi <= 50) ? "优" : (s_wx.aqi <= 100) ? "良"
+                        : (s_wx.aqi <= 150) ? "轻度" : (s_wx.aqi <= 200) ? "中度" : "重度";
+        snprintf(b, sizeof(b), "AQI %d %s", s_wx.aqi, lv);
+    } else {
+        snprintf(b, sizeof(b), "AQI --");
+    }
     lv_label_set_text(s_lbl_aqi, b);
 
     snprintf(b, sizeof(b), "湿度 %d%%", s_wx.humidity);
@@ -723,6 +790,7 @@ static void reset_ui_refs(void)
     s_lbl_city = NULL;
     s_lbl_updated = NULL;
     s_lbl_temp = NULL;
+    s_neg = NULL;
     s_lbl_desc = NULL;
     s_lbl_feels = NULL;
     s_lbl_aqi = NULL;
@@ -807,6 +875,9 @@ static void create(lv_obj_t *parent)
     lv_obj_set_style_text_font(s_lbl_temp, &ui_font_time96, 0);
     lv_obj_set_style_text_color(s_lbl_temp, col(C_TXT), 0);
     lv_obj_set_pos(s_lbl_temp, 12, 66);
+
+    s_neg = shp(s_root, 12, 118, 26, 7, 0xFFFFFF, 255, 3);
+    lv_obj_add_flag(s_neg, LV_OBJ_FLAG_HIDDEN);
 
     /* 度符号用一个小圆环画，凑近参考图那种"26°" */
     lv_obj_t *deg = shp(s_root, 12 + 118, 82, 16, 16, 0xFFFFFF, 0, 8);
