@@ -345,14 +345,15 @@ static void weather_start(void)
     static bool started;
     if (!started) {
         started = true;
-        SemaphoreHandle_t sem = xSemaphoreCreateBinary();
-        if (sem) {
+        /* 顺序很重要：任务创建后会立刻抢占运行并 xSemaphoreTake(s_sem)，
+         * 所以必须先把 s_sem 赋好再创建任务，否则 take(NULL) 直接 assert 重启。 */
+        s_sem = xSemaphoreCreateBinary();
+        if (s_sem) {
             BaseType_t ok = xTaskCreateWithCaps(fetch_task, "wx_fetch", 8192, NULL, 3, NULL,
                                                 MALLOC_CAP_SPIRAM);
-            if (ok == pdPASS) {
-                s_sem = sem;
-            } else {
-                vSemaphoreDelete(sem);
+            if (ok != pdPASS) {
+                vSemaphoreDelete(s_sem);
+                s_sem = NULL;
                 ESP_LOGE(TAG, "wx_fetch create failed: 天气不可用");
             }
         }

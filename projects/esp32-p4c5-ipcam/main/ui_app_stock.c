@@ -3456,19 +3456,21 @@ static void create(lv_obj_t *parent)
     rebuild_list();
 
     if (!s_sem) {
-        /* R-36：任务创建失败时要明确报错，不能留下"信号量在、没人消费"的半死状态 */
-        SemaphoreHandle_t sem = xSemaphoreCreateBinary();
-        if (sem) {
+        /* R-36：任务创建失败时要明确报错，不能留下"信号量在、没人消费"的半死状态。
+         * 注意顺序：任务起来就会 xSemaphoreTake(s_sem)，必须先赋值再建任务，
+         * 否则 take(NULL) 会 assert 重启。 */
+        s_sem = xSemaphoreCreateBinary();
+        if (s_sem) {
             BaseType_t ok = xTaskCreate(fetch_task, "stock_fetch", 8192, NULL, 3, NULL);
             if (ok != pdPASS) {
                 ESP_LOGW(TAG, "stock_fetch 8192 failed, retry 6144");
                 ok = xTaskCreate(fetch_task, "stock_fetch", 6144, NULL, 3, NULL);
             }
             if (ok == pdPASS) {
-                s_sem = sem;
                 ESP_LOGI(TAG, "stock_fetch task started");
             } else {
-                vSemaphoreDelete(sem);
+                vSemaphoreDelete(s_sem);
+                s_sem = NULL;
                 ESP_LOGE(TAG, "stock_fetch create failed: 行情不可用");
                 ui_shell_toast("内存不足：行情暂不可用");
             }

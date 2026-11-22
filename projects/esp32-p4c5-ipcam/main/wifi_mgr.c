@@ -49,6 +49,7 @@ static int64_t s_last_scan_ms;
  *   断开时置 true（用户要重新选网络）→ 扫完清 false
  *   手动点「扫描」置 true */
 static bool s_need_scan = true;
+static bool s_connect_after_scan;   /* 开机"先扫描再连接"（R-39） */
 
 static wifi_mgr_ap_info_t s_ap_cache[MAX_AP_CACHE];
 static int s_ap_count;
@@ -407,6 +408,41 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
         free(recs);
         s_last_scan_ms = esp_timer_get_time() / 1000;
         s_need_scan = false;            /* 这一轮扫完了，除非再断线/手动点扫描 */
+
+        /* ---- R-39：开机"扫描后连接"，在这里给出确切结论 ---- */
+        if (s_connect_after_scan) {
+            s_connect_after_scan = false;
+            const wifi_mgr_ap_info_t *tgt = NULL;
+            for (int i = 0; i < s_ap_count; i++) {
+                if (strcmp(s_ap_cache[i].ssid, s_ssid) == 0) {
+                    tgt = &s_ap_cache[i];
+                    break;
+                }
+            }
+            if (!tgt) {
+                ESP_LOGE(TAG, "*** 目标 \"%s\" 不在扫描结果里（见上方可见 AP 清单）***", s_ssid);
+                ESP_LOGE(TAG, "*** 常见原因：路由器没开 / SSID 改过名 / 只开了 5G 且距离远 ***");
+                ESP_LOGE(TAG, "*** 已暂停自动重连，请到 设置→WiFi 里重新选择网络 ***");
+                s_state = WIFI_MGR_IDLE;
+                notify();
+                return;
+            }
+            if (tgt->authmode != WIFI_AUTH_OPEN && s_cred[0].pass[0] == '\0') {
+                ESP_LOGE(TAG, "*** \"%s\" 是加密网络（auth=%d），但 NVS 里保存的密码是空的 ***",
+                         s_ssid, (int)tgt->authmode);
+                ESP_LOGE(TAG, "*** 这就是连不上的原因，请到 设置→WiFi 里重新输入密码 ***");
+                s_state = WIFI_MGR_IDLE;
+                notify();
+                return;
+            }
+            ESP_LOGI(TAG, "target \"%s\" ok: ch=%d rssi=%d auth=%d -> connect",
+                     tgt->ssid, tgt->channel, tgt->rssi, (int)tgt->authmode);
+            s_state = WIFI_MGR_CONNECTING;
+            esp_wifi_connect();
+            notify();
+            return;
+        }
+
         /* 关键修复：不要把状态强制改成 IDLE。
          * 已连接时扫描完毕，如果这里改成 IDLE，界面会显示"未连接"（假断连），
          * 股票/天气等依赖 CONNECTED 的功能也会停摆。 */
@@ -498,18 +534,6 @@ esp_err_t wifi_mgr_init(void)
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 
-    /* C5 是双频芯片，但默认只按 2.4G 扫描；路由器是 5G-only 时会一直 NO_AP_FOUND。
-     * 设成 AUTO（2.4G + 5G），两种频段都能扫到/连上。 */
-    {
-        esp_err_t berr = esp_wifi_set_band_mode(WIFI_BAND_MODE_AUTO);
-        if (berr == ESP_OK) {
-            ESP_LOGI(TAG, "band mode: 2.4G + 5G");
-        } else {
-            ESP_LOGW(TAG, "set band mode auto failed: %s（继续按默认频段）",
-                     esp_err_to_name(berr));
-        }
-    }
-
     apply_wifi_config(ssid, pass);
     /* 监控场景不希望省电导致丢包/高延迟 */
     esp_wifi_set_ps(WIFI_PS_NONE);
@@ -520,17 +544,46 @@ esp_err_t wifi_mgr_init(void)
         return ret;
     }
 
+    /* C5 是双频芯片，但默认只按 2.4G 扫描；路由器是 5G-only 时会一直 NO_AP_FOUND。
+     * 设成 AUTO（2.4G + 5G）两种频段都能扫/连。
+     * 注意：这个接口必须在 esp_wifi_start() 之后调用，在之前会返回
+     * ESP_ERR_WIFI_NOT_STARTED 而且不生效（R-38）。 */
+    {
+        esp_err_t berr = esp_wifi_set_band_mode(WIFI_BAND_MODE_AUTO);
+        if (berr == ESP_OK) {
+            ESP_LOGI(TAG, "band mode: 2.4G + 5G");
+        } else {
+            ESP_LOGW(TAG, "set band mode auto failed: %s（继续按默认频段）",
+                     esp_err_to_name(berr));
+        }
+    }
+
     if (ssid[0] != '\0') {
         s_state = WIFI_MGR_CONNECTING;
         s_retry = 0;
-        esp_wifi_connect();
-        ESP_LOGI(TAG, "wifi started, auto-connect \"%s\"", ssid);
+        /* R-39：先扫描，再按扫描结果决定连不连。
+         * 原来直接 esp_wifi_connect()，一旦 AP 不存在/密码为空就只会无限
+         * NO_AP_FOUND(reason 210)，日志里看不出到底是哪种原因；而且连接期间
+         * 扫描会被 ESP_ERR_WIFI_STATE 拒掉，永远拿不到 AP 列表。 */
+        s_connect_after_scan = true;
+        s_need_scan = true;
+        s_state_before_scan = WIFI_MGR_IDLE;
+        wifi_scan_config_t boot_cfg = { 0 };
+        esp_err_t serr = esp_wifi_scan_start(&boot_cfg, false);
+        if (serr == ESP_OK) {
+            s_state = WIFI_MGR_SCANNING;
+            ESP_LOGI(TAG, "wifi started, scan first then connect \"%s\"", ssid);
+        } else {
+            ESP_LOGW(TAG, "boot scan failed 0x%x, connect directly", serr);
+            s_connect_after_scan = false;
+            esp_wifi_connect();
+            ESP_LOGI(TAG, "wifi started, auto-connect \"%s\"", ssid);
+        }
     } else {
         ESP_LOGI(TAG, "wifi started, no saved credentials");
+        s_need_scan = true;
+        esp_timer_start_once(s_scan_timer, BOOT_SCAN_DELAY_MS * 1000ULL);
     }
-    /* 开机只扫一次：4s 后执行，如果已连上就只当刷新一次 AP 列表 */
-    s_need_scan = true;
-    esp_timer_start_once(s_scan_timer, BOOT_SCAN_DELAY_MS * 1000ULL);
     return ESP_OK;
 }
 
@@ -602,6 +655,24 @@ esp_err_t wifi_mgr_connect(const char *ssid, const char *password)
     char pass[65] = { 0 };
     if (password) {
         strlcpy(pass, password, sizeof(pass));
+    }
+    /* R-40 防御：调用方传了空密码，但 NVS 里存着非空密码、且这个网络是加密的，
+     * 就沿用已保存的密码。否则一次误操作（比如空着点「连接」）会把好密码
+     * 覆盖成空串，设备从此永远 NO_AP_FOUND 且不会弹密码框。 */
+    if (pass[0] == '\0') {
+        const char *old = wifi_mgr_saved_pass(ssid);
+        bool enc = true;        /* 扫描结果里没有这条时按"加密"处理 */
+        for (int i = 0; i < s_ap_count; i++) {
+            if (strcmp(s_ap_cache[i].ssid, ssid) == 0) {
+                enc = (s_ap_cache[i].authmode != WIFI_AUTH_OPEN);
+                break;
+            }
+        }
+        if (old && old[0] != '\0' && enc) {
+            strlcpy(pass, old, sizeof(pass));
+            ESP_LOGW(TAG, "empty password for \"%s\", keep saved one (len=%d)",
+                     ssid, (int)strlen(pass));
+        }
     }
     apply_wifi_config(ssid, pass);
     /* 保存到多网络凭据列表（同一 SSID 更新密码并置顶为最近使用） */

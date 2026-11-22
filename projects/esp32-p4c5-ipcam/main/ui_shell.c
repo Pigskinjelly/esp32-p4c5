@@ -865,9 +865,11 @@ static void cc_ap_row_click_cb(lv_event_t *e)
         ui_shell_toast("正在连接…");
         return;
     }
-    /* 存过密码就直接连 */
+    /* 存过密码就直接连。
+     * R-40：必须排除"保存的是空串"——之前存过空密码时 saved 指向 ""，
+     * 结果为非 NULL，于是永远走这条路、永远不弹密码框，用户怎么点都连不上。 */
     const char *saved = wifi_mgr_saved_pass(ssid);
-    if (saved != NULL) {
+    if (saved != NULL && saved[0] != '\0') {
         wifi_mgr_connect(ssid, saved);
         ui_shell_toast("使用已保存的密码连接…");
         return;
@@ -1069,6 +1071,12 @@ static void pw_connect_cb(lv_event_t *e)
 {
     (void)e;
     const char *pwd = lv_textarea_get_text(s_pw_ta);
+    /* R-40：密码框能走到这里说明该网络是加密的（开放网络不弹框）。
+     * 空密码提交会把 "" 写进 NVS 覆盖原密码，之后再也连不上。 */
+    if (pwd[0] == '\0') {
+        ui_shell_toast("请输入 WiFi 密码");
+        return;
+    }
     wifi_mgr_connect(s_pw_ssid, pwd);
     lv_obj_add_flag(s_pw_modal, LV_OBJ_FLAG_HIDDEN);
     ui_shell_toast("正在连接…");
