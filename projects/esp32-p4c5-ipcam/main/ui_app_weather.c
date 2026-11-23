@@ -585,8 +585,13 @@ static void icon_draw(lv_obj_t *box, int size, int code)
 static lv_obj_t *s_root;
 static lv_obj_t *s_lbl_city;
 static lv_obj_t *s_lbl_updated;
+/* 主温度区几何：字号 96 的细体（Segoe UI Light），line_height=80 */
+#define HERO_X      16
+#define HERO_Y      68
+#define HERO_RIGHT_MIN 110       /* 右侧文字至少保留的宽度 */
+
 static lv_obj_t *s_lbl_temp;
-static lv_obj_t *s_neg;          /* 负号（96px 字体里没有 '-') */
+static lv_obj_t *s_deg;          /* 度符号圆环，随温度宽度动态跟随 */
 static lv_obj_t *s_lbl_desc;
 static lv_obj_t *s_lbl_feels;
 static lv_obj_t *s_lbl_aqi;
@@ -638,6 +643,45 @@ static void bar_apply(int i, float tmin, float tmax, float gmin, float gmax)
     }
 }
 
+/* 温度 label 宽度随位数变化（"--" / "8" / "26" / "-12"），
+ * 度符号和右侧三行必须跟着走：既不能压在数字上，也不能离得太远。 */
+static void layout_hero(void)
+{
+    if (!s_lbl_temp) {
+        return;
+    }
+    lv_obj_update_layout(s_lbl_temp);
+    lv_coord_t tw = lv_obj_get_width(s_lbl_temp);
+    if (tw <= 0) {
+        tw = 100;
+    }
+
+    /* 度符号：紧贴数字右侧，垂直偏上（视觉在数字顶端） */
+    if (s_deg) {
+        lv_coord_t dx = HERO_X + tw + 3;
+        if (dx > 480 - 24) {
+            dx = 480 - 24;
+        }
+        lv_obj_set_pos(s_deg, dx, HERO_Y + 12);
+    }
+
+    /* 右侧信息：与温度右边留 ~26px；温度特别宽时收缩到安全线 */
+    lv_coord_t rx = HERO_X + tw + 30;
+    lv_coord_t max_rx = 480 - 16 - HERO_RIGHT_MIN;
+    if (rx > max_rx) {
+        rx = max_rx;
+    }
+    if (s_lbl_desc) {
+        lv_obj_set_pos(s_lbl_desc, rx, HERO_Y + 6);
+    }
+    if (s_lbl_feels) {
+        lv_obj_set_pos(s_lbl_feels, rx, HERO_Y + 42);
+    }
+    if (s_lbl_aqi) {
+        lv_obj_set_pos(s_lbl_aqi, rx, HERO_Y + 66);
+    }
+}
+
 static void apply_ui(void)
 {
     if (!s_lbl_city) {
@@ -662,25 +706,15 @@ static void apply_ui(void)
         lv_label_set_text(s_lbl_hum, "湿度 --");
         lv_label_set_text(s_lbl_wind, "风速 --");
         lv_label_set_text(s_lbl_updated, "");
+        lv_obj_set_pos(s_lbl_temp, HERO_X, HERO_Y);
+        layout_hero();
         return;
     }
 
     char b[32];
     snprintf(b, sizeof(b), "%.0f", s_wx.temp);
     lv_label_set_text(s_lbl_temp, b);
-
-    /* 负温度：96px 字体没有 '-'，用一根小横杠补上，并把数字右移 */
-    if (s_wx.temp < -0.4f) {
-        if (s_neg) {
-            lv_obj_remove_flag(s_neg, LV_OBJ_FLAG_HIDDEN);
-        }
-        lv_obj_set_pos(s_lbl_temp, 40, 66);
-    } else {
-        if (s_neg) {
-            lv_obj_add_flag(s_neg, LV_OBJ_FLAG_HIDDEN);
-        }
-        lv_obj_set_pos(s_lbl_temp, 12, 66);
-    }
+    lv_obj_set_pos(s_lbl_temp, HERO_X, HERO_Y);   /* 负号由字体自带，不用再补横杠 */
     lv_label_set_text(s_lbl_desc, wmo_text(s_wx.code));
     snprintf(b, sizeof(b), "%s 更新", s_wx.updated);
     lv_label_set_text(s_lbl_updated, b);
@@ -743,6 +777,9 @@ static void apply_ui(void)
         }
     }
 
+    /* 温度文本定稿后再排 hero 区，度符号/右侧三行才不会错位 */
+    layout_hero();
+
     /* 背景：时段或天气变了才重画 */
     int key = day_slot(t.tm_hour) * 8 + (s_wx.valid ? (s_wx.code / 10) : 7);
     if (key != s_bg_key) {
@@ -791,7 +828,7 @@ static void reset_ui_refs(void)
     s_lbl_city = NULL;
     s_lbl_updated = NULL;
     s_lbl_temp = NULL;
-    s_neg = NULL;
+    s_deg = NULL;
     s_lbl_desc = NULL;
     s_lbl_feels = NULL;
     s_lbl_aqi = NULL;
@@ -870,33 +907,31 @@ static void create(lv_obj_t *parent)
     lv_obj_set_style_text_opa(s_lbl_updated, 170, 0);
     lv_obj_align(s_lbl_updated, LV_ALIGN_TOP_RIGHT, -16, 50);
 
-    /* ---- 大温度 ---- */
+    /* ---- 大温度（位置由 layout_hero 统一安排） ---- */
     s_lbl_temp = lv_label_create(s_root);
     lv_label_set_text(s_lbl_temp, "--");
-    lv_obj_set_style_text_font(s_lbl_temp, &ui_font_time96, 0);
+    /* 原来用的是 Arial Black（超粗），参考图是细体，换成 Segoe UI Light */
+    lv_obj_set_style_text_font(s_lbl_temp, &ui_font_time96_light, 0);
     lv_obj_set_style_text_color(s_lbl_temp, col(C_TXT), 0);
-    lv_obj_set_pos(s_lbl_temp, 12, 66);
+    lv_obj_set_pos(s_lbl_temp, HERO_X, HERO_Y);
 
-    s_neg = shp(s_root, 12, 118, 26, 7, 0xFFFFFF, 255, 3);
-    lv_obj_add_flag(s_neg, LV_OBJ_FLAG_HIDDEN);
+    /* 度符号：小圆环；x 由 layout_hero() 按温度实际宽度定位，避免压字 */
+    s_deg = shp(s_root, HERO_X + 110, HERO_Y + 12, 15, 15, 0xFFFFFF, 0, 8);
+    lv_obj_set_style_border_width(s_deg, 4, 0);
+    lv_obj_set_style_border_color(s_deg, col(0xFFFFFF), 0);
+    lv_obj_set_style_border_opa(s_deg, 235, 0);
 
-    /* 度符号用一个小圆环画，凑近参考图那种"26°" */
-    lv_obj_t *deg = shp(s_root, 12 + 118, 82, 16, 16, 0xFFFFFF, 0, 8);
-    lv_obj_set_style_border_width(deg, 4, 0);
-    lv_obj_set_style_border_color(deg, col(0xFFFFFF), 0);
-    lv_obj_set_style_border_opa(deg, 235, 0);
-
-    /* ---- 右侧：天气 / 体感 / AQI ---- */
+    /* ---- 右侧：天气 / 体感 / AQI（x 也由 layout_hero 决定） ---- */
     s_lbl_desc = ui_label(s_root, "—", &ui_cjk_24, C_TXT);
-    lv_obj_set_pos(s_lbl_desc, 214, 96);
+    lv_obj_set_pos(s_lbl_desc, HERO_X + 140, HERO_Y + 6);
 
     s_lbl_feels = ui_label(s_root, "体感 --", &ui_cjk_16, C_TXT);
     lv_obj_set_style_text_opa(s_lbl_feels, 190, 0);
-    lv_obj_set_pos(s_lbl_feels, 214, 130);
+    lv_obj_set_pos(s_lbl_feels, HERO_X + 140, HERO_Y + 42);
 
     s_lbl_aqi = ui_label(s_root, "AQI --", &ui_cjk_16, C_TXT);
     lv_obj_set_style_text_opa(s_lbl_aqi, 190, 0);
-    lv_obj_set_pos(s_lbl_aqi, 214, 154);
+    lv_obj_set_pos(s_lbl_aqi, HERO_X + 140, HERO_Y + 66);
 
     /* ---- 逐小时 ---- */
     for (int i = 0; i < 5; i++) {
@@ -904,8 +939,8 @@ static void create(lv_obj_t *parent)
         if (i == 0) {
             s_hour_now = lv_obj_create(s_root);
             lv_obj_remove_flag(s_hour_now, LV_OBJ_FLAG_SCROLLABLE);
-            lv_obj_set_size(s_hour_now, 80, 96);
-            lv_obj_set_pos(s_hour_now, x - 4, 190);
+            lv_obj_set_size(s_hour_now, 80, 92);
+            lv_obj_set_pos(s_hour_now, x - 4, 168);
             lv_obj_set_style_bg_color(s_hour_now, col(0xFFFFFF), 0);
             lv_obj_set_style_bg_opa(s_hour_now, 30, 0);
             lv_obj_set_style_border_width(s_hour_now, 1, 0);
@@ -918,12 +953,12 @@ static void create(lv_obj_t *parent)
         lv_obj_set_style_text_opa(s_lbl_hour[i], 200, 0);
         lv_obj_set_width(s_lbl_hour[i], 72);
         lv_obj_set_style_text_align(s_lbl_hour[i], LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_pos(s_lbl_hour[i], x, 198);
+        lv_obj_set_pos(s_lbl_hour[i], x, 176);
 
         s_ico_hour[i] = lv_obj_create(s_root);
         lv_obj_remove_flag(s_ico_hour[i], LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_size(s_ico_hour[i], 26, 26);
-        lv_obj_set_pos(s_ico_hour[i], x + 23, 222);
+        lv_obj_set_pos(s_ico_hour[i], x + 23, 200);
         lv_obj_set_style_bg_opa(s_ico_hour[i], LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(s_ico_hour[i], 0, 0);
         lv_obj_set_style_pad_all(s_ico_hour[i], 0, 0);
@@ -931,14 +966,15 @@ static void create(lv_obj_t *parent)
         s_tmp_hour[i] = ui_label(s_root, "--", &lv_font_montserrat_20, C_TXT);
         lv_obj_set_width(s_tmp_hour[i], 72);
         lv_obj_set_style_text_align(s_tmp_hour[i], LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_pos(s_tmp_hour[i], x, 254);
+        lv_obj_set_pos(s_tmp_hour[i], x, 232);
     }
 
     /* ---- 未来三天 ---- */
     lv_obj_t *fc = lv_obj_create(s_root);
     lv_obj_remove_flag(fc, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(fc, 448, 158);
-    lv_obj_set_pos(fc, 16, 300);
+    lv_obj_set_size(fc, 448, 148);
+    /* 贴底对齐：卡片底距屏幕底 50px，正好是底部信息行(高22)+上下留白 */
+    lv_obj_align(fc, LV_ALIGN_BOTTOM_LEFT, 16, -50);
     lv_obj_set_style_bg_color(fc, col(0xFFFFFF), 0);
     lv_obj_set_style_bg_opa(fc, 26, 0);
     lv_obj_set_style_border_width(fc, 1, 0);
@@ -949,11 +985,11 @@ static void create(lv_obj_t *parent)
 
     lv_obj_t *ft = ui_label(fc, "未来 3 天", NULL, C_TXT);
     lv_obj_set_style_text_opa(ft, 170, 0);
-    lv_obj_set_pos(ft, 16, 10);
+    lv_obj_set_pos(ft, 16, 8);
 
     static const char *dn[3] = { "明天", "后天", "大后天" };
     for (int i = 0; i < 3; i++) {
-        int y = 40 + i * 38;
+        int y = 34 + i * 36;
         s_row_day[i] = ui_label(fc, dn[i], NULL, C_TXT);
         lv_obj_set_pos(s_row_day[i], 16, y + 2);
 
@@ -987,17 +1023,19 @@ static void create(lv_obj_t *parent)
     }
 
     /* ---- 底部 ---- */
+    /* 原来写死 y=462，字体行高 22 → 底边 484 超出 480 屏幕，被裁掉。
+     * 改成贴底对齐 + 12px 安全边距，任何屏高都不会溢出。 */
     s_lbl_hum = ui_label(s_root, "湿度 --", NULL, C_TXT);
     lv_obj_set_style_text_opa(s_lbl_hum, 180, 0);
-    lv_obj_set_pos(s_lbl_hum, 16, 462);
+    lv_obj_align(s_lbl_hum, LV_ALIGN_BOTTOM_LEFT, 16, -12);
 
     s_lbl_wind = ui_label(s_root, "风速 --", NULL, C_TXT);
     lv_obj_set_style_text_opa(s_lbl_wind, 180, 0);
-    lv_obj_align(s_lbl_wind, LV_ALIGN_TOP_MID, 0, 462);
+    lv_obj_align(s_lbl_wind, LV_ALIGN_BOTTOM_MID, 0, -12);
 
     s_lbl_date = ui_label(s_root, "", NULL, C_TXT);
     lv_obj_set_style_text_opa(s_lbl_date, 180, 0);
-    lv_obj_align(s_lbl_date, LV_ALIGN_TOP_RIGHT, -16, 462);
+    lv_obj_align(s_lbl_date, LV_ALIGN_BOTTOM_RIGHT, -16, -12);
 
     weather_start();
     apply_ui();

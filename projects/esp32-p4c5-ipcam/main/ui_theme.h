@@ -15,6 +15,7 @@ extern const lv_font_t ui_cjk_24;
 
 /* ---- 锁屏大数字字体（96px，仅 0-9 与冒号） ---- */
 extern const lv_font_t ui_font_time96;
+extern const lv_font_t ui_font_time96_light;   /* 96px 细体：天气大温度用 */
 
 /* ---- 配色 ---- */
 #define C_BG        0x0A1630    /* 桌面深蓝 */

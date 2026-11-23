@@ -47,6 +47,7 @@
 #include "app_jpeg.h"
 #include "app_snapshot.h"
 #include "app_storage.h"
+#include "runlog.h"
 #include "ui_shell.h"
 #include "trade_day.h"
 #include "ui_apps.h"
@@ -461,6 +462,11 @@ static void heartbeat_task(void *arg)
                  (unsigned long)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
                  (unsigned long)(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024),
                  (unsigned long)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024));
+
+        /* 同一份数据写进 TF 卡日志（含 WiFi 变化/低内存事件） */
+        runlog_heartbeat(frames, keyframes, clients, pkts,
+                         wifi_mgr_state_str(wifi_mgr_get_state()),
+                         wifi_mgr_get_ip());
     }
 }
 
@@ -472,6 +478,12 @@ static void camera_tune_color(int fd)
      * 颜色偏差改为在 PPA 输出端做 YUV 范围/标准选择处理。 */
 }
 
+/* 本次启动的复位信息：runlog 要等 TF 卡挂载完才能写，先存着 */
+static int      s_boot_rst;
+static uint32_t s_boot_count;
+static uint32_t s_crash_count;
+static bool     s_boot_info_valid;
+
 /* 后台挂载存储：TF 卡优先，失败回落 flash；不阻塞启动 */
 static void storage_task(void *arg)
 {
@@ -480,6 +492,17 @@ static void storage_task(void *arg)
         ESP_LOGI(TAG, "storage ready at %s (%s)", app_storage_root(),
                  app_storage_is_sd() ? "TF card" : "flash");
         ui_boot_check_mark(BOOT_STORE, true, app_storage_is_sd() ? "TF 卡" : "Flash");
+
+        /* 运行日志：存储就绪后立刻开始记，补一条 boot（含复位原因/计数） */
+        if (runlog_init()) {
+            if (s_boot_info_valid) {
+                runlog_boot(s_boot_rst, s_boot_count, s_crash_count);
+            } else {
+                runlog_boot((int)esp_reset_reason(), 0, 0);
+            }
+            /* 串口里回显最近 3 条：不用拔卡也能确认日志真的在写 */
+            runlog_dump(12);
+        }
     } else {
         ESP_LOGW(TAG, "photo storage mount failed, camera capture disabled");
         ui_boot_check_mark(BOOT_STORE, false, "挂载失败");
@@ -681,10 +704,11 @@ void app_main(void)
             }
             /* 早期跑压测把计数跑乱了（上千次），这里清一次；
              * 另外任何异常计数明显异常时也重置，免得吓人 */
-            if (nvs_get_u8(h, "rst_ver", &ver) != ESP_OK || ver < 3 || crashes > 500) {
+            /* rst_ver 4：清掉调试期的历史计数（那时故意触发 panic 测过） */
+            if (nvs_get_u8(h, "rst_ver", &ver) != ESP_OK || ver < 4 || crashes > 500) {
                 boots = 0;
                 crashes = 0;
-                nvs_set_u8(h, "rst_ver", 3);
+                nvs_set_u8(h, "rst_ver", 4);
                 nvs_set_u32(h, "crashes", 0);
             }
             boots++;
@@ -692,6 +716,11 @@ void app_main(void)
             nvs_commit(h);
             nvs_close(h);
         }
+        s_boot_rst = (int)rr;
+        s_boot_count = boots;
+        s_crash_count = crashes;
+        s_boot_info_valid = true;
+
         ESP_LOGW(TAG, "reset reason: %d(%s) | 累计启动 %u 次 / 异常 %u 次",
                  (int)rr, ((int)rr >= 0 && (int)rr < 11) ? rn[(int)rr] : "?",
                  (unsigned)boots, (unsigned)crashes);
@@ -792,7 +821,8 @@ void app_main(void)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "video init failed: 0x%x（UI 与 Wi-Fi 仍可用）", ret);
         ui_boot_check_mark(BOOT_CAM, false, "初始化失败");
-        xTaskCreate(heartbeat_task, "heartbeat", 3072, NULL, 3, NULL);
+        /* 4096：心跳里还要格式化运行日志（栈上 ~550B），3072 太紧 */
+        xTaskCreate(heartbeat_task, "heartbeat", 4096, NULL, 3, NULL);
         return;
     }
 
@@ -800,7 +830,7 @@ void app_main(void)
     if (video_fd < 0) {
         ESP_LOGE(TAG, "camera open failed");
         ui_boot_check_mark(BOOT_CAM, false, "打开失败");
-        xTaskCreate(heartbeat_task, "heartbeat", 3072, (void *)1, 3, NULL);
+        xTaskCreate(heartbeat_task, "heartbeat", 4096, (void *)1, 3, NULL);
         return;
     }
 
@@ -889,7 +919,7 @@ void app_main(void)
     /* 12. 照片存储挂载放到后台任务：SD 卡初始化可能要几百 ms，不能卡住启动 */
     xTaskCreate(storage_task, "storage", 4096, NULL, 3, NULL);
 
-    xTaskCreate(heartbeat_task, "heartbeat", 3072, touch ? (void *)1 : NULL, 3, NULL);
+    xTaskCreate(heartbeat_task, "heartbeat", 4096, touch ? (void *)1 : NULL, 3, NULL);
 
 #if WX_UI_TEST
     xTaskCreate(wx_ui_test_task, "wx_test", 4096, NULL, 2, NULL);
