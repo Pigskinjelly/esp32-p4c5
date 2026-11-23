@@ -28,6 +28,12 @@
 #define SCAN_CACHE_MS       600000  /* 兜底：10 分钟内不因"缓存过期"重复扫描 */
 #define BOOT_SCAN_DELAY_MS  4000    /* 开机 4s 后扫一次（此时多半已拿到 IP） */
 
+/* ---- 自动选网 / 跨网络漫游（见下方 roam_* 实现）---- */
+#define ROAM_SCAN_MS        60000   /* 每 60s 静默扫一次，看看有没有更合适的网络 */
+#define ROAM_HYST_DBM       12      /* 新网络至少强 12dBm 才切，防抖 */
+#define ROAM_MISS_LIMIT     3       /* 当前网络连续 3 次扫不到才认定走远 */
+#define ROAM_COOLDOWN_MS    45000   /* 切换后 45s 内不再切 */
+
 static wifi_mgr_state_t s_state = WIFI_MGR_IDLE;
 static wifi_mgr_state_t s_state_before_scan = WIFI_MGR_IDLE;
 static wifi_mgr_notify_cb_t s_notify_cb;
@@ -40,7 +46,6 @@ static int  s_retry;
 static bool s_user_disconnect;      /* 用户主动断开：不再自动重连 */
 static bool s_radio_on = true;   /* WiFi 射频开关状态 */
 static bool s_auth_failed;          /* 最近一次失败是密码/认证问题 */
-static int  s_last_reason = -1;     /* 最近一次断开原因（wifi_err_reason_t） */
 static int  s_auth_fail_cnt;        /* 连续认证失败次数 */
 static esp_timer_handle_t s_retry_timer;
 static esp_timer_handle_t s_scan_timer;
@@ -51,6 +56,15 @@ static int64_t s_last_scan_ms;
  *   手动点「扫描」置 true */
 static bool s_need_scan = true;
 static bool s_connect_after_scan;   /* 开机"先扫描再连接"（R-39） */
+
+/* 漫游状态 */
+static esp_timer_handle_t s_roam_timer;
+static esp_timer_handle_t s_roam_switch_timer;
+static bool    s_scan_silent;       /* 静默扫描：不改 UI 状态、不 notify */
+static int     s_miss_cnt;          /* 当前网络连续扫不到的次数 */
+static int64_t s_roam_block_ms;     /* 冷却截止时间 */
+static int     s_pending_roam = -1; /* 待切换的凭据下标 */
+static int     s_roam_cnt;          /* 累计切换次数 */
 
 static wifi_mgr_ap_info_t s_ap_cache[MAX_AP_CACHE];
 static int s_ap_count;
@@ -291,12 +305,162 @@ static void scan_timer_cb(void *arg)
     wifi_mgr_scan_async();
 }
 
+/* ================= 自动选网 / 跨网络漫游 =================
+ *
+ * 场景：家里两个已保存网络 A、B。
+ *   在 A 范围 → 连 A；走到 B 范围 → A 扫不到了，自动切 B；
+ *   回到 A 范围 → A 又出现且更强，自动切回 A。
+ *
+ * 判定三档（都带防抖，避免在边界来回跳）：
+ *   1) 已连接，但当前网络连续 ROAM_MISS_LIMIT 次扫不到 → 切到范围内最强的已保存网络
+ *   2) 范围内有别的已保存网络，且比当前强 ROAM_HYST_DBM 以上 → 切过去
+ *   3) 每次切换后 ROAM_COOLDOWN_MS 内不再切
+ *
+ * 另外两条约束：
+ *   - 用户主动断开（s_user_disconnect）或射频关闭时，完全不插手；
+ *   - 定期扫描用"静默模式"，不把状态改成 SCANNING，避免 UI 每 60 秒闪一次"正在扫描"。
+ */
+
+static void roam_switch_cb(void *arg);
+
+/* 扫描结果里某个 SSID 的 RSSI，没有则 -127 */
+static int ap_rssi_of(const char *ssid)
+{
+    if (!ssid || !ssid[0]) {
+        return -127;
+    }
+    for (int i = 0; i < s_ap_count; i++) {
+        if (strcmp(s_ap_cache[i].ssid, ssid) == 0) {
+            return s_ap_cache[i].rssi;
+        }
+    }
+    return -127;
+}
+
+/* 已保存网络里，当前在范围内且信号最好的一个；返回凭据下标，-1 表示都不在范围 */
+static int best_saved_cred(int *out_rssi)
+{
+    int best = -1;
+    int best_rssi = -127;
+    for (int i = 0; i < s_cred_cnt; i++) {
+        int r = ap_rssi_of(s_cred[i].ssid);
+        if (r > best_rssi) {
+            best_rssi = r;
+            best = i;
+        }
+    }
+    if (out_rssi) {
+        *out_rssi = best_rssi;
+    }
+    return best;
+}
+
+/* 真正发起切换：放到一次性定时器里，避免在 wifi 事件任务里做 150ms 延时 */
+static void roam_switch_cb(void *arg)
+{
+    (void)arg;
+    int idx = s_pending_roam;
+    s_pending_roam = -1;
+    if (idx < 0 || idx >= s_cred_cnt) {
+        return;
+    }
+    if (s_user_disconnect || !s_radio_on) {
+        return;
+    }
+    s_roam_cnt++;
+    ESP_LOGI(TAG, "roam: connecting \"%s\" (#%d), drop \"%s\"",
+             s_cred[idx].ssid, s_roam_cnt, s_ssid);
+    wifi_mgr_connect(s_cred[idx].ssid, s_cred[idx].pass);
+}
+
+static void roam_request_switch(int cred_idx, int rssi, const char *why)
+{
+    if (cred_idx < 0 || cred_idx >= s_cred_cnt || cred_idx == s_pending_roam) {
+        return;
+    }
+    s_roam_block_ms = esp_timer_get_time() / 1000 + ROAM_COOLDOWN_MS;
+    s_miss_cnt = 0;
+    s_pending_roam = cred_idx;
+    ESP_LOGI(TAG, "roam: pick \"%s\" rssi=%d (%s)", s_cred[cred_idx].ssid, rssi, why);
+    if (s_roam_switch_timer) {
+        esp_timer_stop(s_roam_switch_timer);
+        esp_timer_start_once(s_roam_switch_timer, 100 * 1000);
+    } else {
+        roam_switch_cb(NULL);
+    }
+}
+
+static void roam_evaluate(void)
+{
+    if (!s_radio_on || s_user_disconnect || s_cred_cnt == 0) {
+        return;
+    }
+    int best_rssi = -127;
+    int best = best_saved_cred(&best_rssi);
+    if (best < 0) {
+        ESP_LOGI(TAG, "roam: no saved network in range (%d ap scanned)", s_ap_count);
+        return;
+    }
+
+    int64_t now = esp_timer_get_time() / 1000;
+    if (now < s_roam_block_ms) {
+        return;                             /* 冷却期内，先稳一会 */
+    }
+
+    if (s_state != WIFI_MGR_CONNECTED) {
+        /* 没连上：如果范围内最好的已保存网络不是当前目标，直接改连它 */
+        if (s_ssid[0] && strcmp(s_ssid, s_cred[best].ssid) != 0) {
+            roam_request_switch(best, best_rssi, "retarget");
+        }
+        return;
+    }
+
+    int cur_rssi = ap_rssi_of(s_ssid);
+    if (cur_rssi == -127) {
+        s_miss_cnt++;
+        ESP_LOGW(TAG, "roam: \"%s\" missing (%d/%d)", s_ssid, s_miss_cnt, ROAM_MISS_LIMIT);
+        if (s_miss_cnt >= ROAM_MISS_LIMIT && strcmp(s_cred[best].ssid, s_ssid) != 0) {
+            roam_request_switch(best, best_rssi, "current lost");
+        }
+        return;
+    }
+    s_miss_cnt = 0;
+
+    /* 有更强且明确更强的已保存网络才切 */
+    if (strcmp(s_cred[best].ssid, s_ssid) != 0 &&
+        best_rssi > cur_rssi + ROAM_HYST_DBM) {
+        ESP_LOGI(TAG, "roam: \"%s\"(%d) -> \"%s\"(%d)",
+                 s_ssid, cur_rssi, s_cred[best].ssid, best_rssi);
+        roam_request_switch(best, best_rssi, "stronger");
+    }
+}
+
+/* 定期静默扫描：已连接时也要扫，否则发现不了"另一个网络更强" */
+static void roam_timer_cb(void *arg)
+{
+    (void)arg;
+    if (!s_radio_on || s_user_disconnect) {
+        return;
+    }
+    if (s_state == WIFI_MGR_SCANNING) {
+        return;                             /* 上一轮还没结束 */
+    }
+    wifi_scan_config_t cfg = { 0 };
+    s_scan_silent = true;
+    esp_err_t err = esp_wifi_scan_start(&cfg, false);
+    if (err != ESP_OK) {
+        s_scan_silent = false;              /* 连接中扫不了，下一轮再来 */
+        ESP_LOGW(TAG, "roam: silent scan rejected 0x%x", err);
+    } else {
+        ESP_LOGI(TAG, "roam: silent scan started (state=%d)", (int)s_state);
+    }
+}
+
 static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t *ev = (wifi_event_sta_disconnected_t *)data;
         int reason = ev ? ev->reason : -1;
-        s_last_reason = reason;
         if (s_state == WIFI_MGR_CONNECTED) {
             ESP_LOGW(TAG, "connection lost (reason %d)", reason);
         }
@@ -354,8 +518,15 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_SCAN_DONE) {
         uint16_t n = MAX_AP_CACHE;
         wifi_ap_record_t *recs = calloc(n, sizeof(wifi_ap_record_t));
+        int prev_cnt = s_ap_count;
         s_ap_count = 0;
         if (recs && esp_wifi_scan_get_ap_records(&n, recs) == ESP_OK) {
+            /* 偶尔一次扫描吐 0 条（射频正在切信道/被连接打断），不该把列表清空，
+             * 否则界面会突然"附近无网络"，漫游判断也会误以为走远了 */
+            if (n == 0 && prev_cnt > 0) {
+                s_ap_count = prev_cnt;
+                ESP_LOGW(TAG, "scan got 0 AP, keep previous %d", prev_cnt);
+            }
             /* 按 RSSI 降序排序 */
             for (int i = 0; i < (int)n; i++) {
                 for (int j = i + 1; j < (int)n; j++) {
@@ -448,8 +619,14 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
         /* 关键修复：不要把状态强制改成 IDLE。
          * 已连接时扫描完毕，如果这里改成 IDLE，界面会显示"未连接"（假断连），
          * 股票/天气等依赖 CONNECTED 的功能也会停摆。 */
-        s_state = s_state_before_scan;
-        notify();
+        if (!s_scan_silent) {
+            s_state = s_state_before_scan;
+            notify();
+        }
+        s_scan_silent = false;
+
+        /* 每次扫描结束都评估一次：要不要切到更好的已保存网络 */
+        roam_evaluate();
 
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *ev = (ip_event_got_ip_t *)data;
@@ -523,6 +700,18 @@ esp_err_t wifi_mgr_init(void)
     };
     ESP_ERROR_CHECK(esp_timer_create(&sargs, &s_scan_timer));
 
+    /* 漫游：每 ROAM_SCAN_MS 静默扫一次；切换动作放一次性定时器里做 */
+    const esp_timer_create_args_t rtargs = {
+        .callback = roam_timer_cb,
+        .name = "wifi_roam",
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&rtargs, &s_roam_timer));
+    const esp_timer_create_args_t rwargs = {
+        .callback = roam_switch_cb,
+        .name = "wifi_roam_sw",
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&rwargs, &s_roam_switch_timer));
+
     char ssid[33], pass[65];
     cred_load();
     /* 连接最近使用过的网络（s_cred[0]） */
@@ -558,6 +747,13 @@ esp_err_t wifi_mgr_init(void)
             ESP_LOGW(TAG, "set band mode auto failed: %s（继续按默认频段）",
                      esp_err_to_name(berr));
         }
+    }
+
+    /* 漫游定时扫描：从这里开始跑，直到射频被关闭 */
+    if (s_roam_timer) {
+        esp_err_t rerr = esp_timer_start_periodic(s_roam_timer, ROAM_SCAN_MS * 1000ULL);
+        ESP_LOGI(TAG, "roam timer started: %s (%d ms)", esp_err_to_name(rerr),
+                 ROAM_SCAN_MS);
     }
 
     if (ssid[0] != '\0') {
@@ -728,6 +924,10 @@ esp_err_t wifi_mgr_set_on(bool on)
             esp_timer_stop(s_scan_timer);
             esp_timer_start_once(s_scan_timer, BOOT_SCAN_DELAY_MS * 1000ULL);
         }
+        if (s_roam_timer) {
+            esp_timer_stop(s_roam_timer);
+            esp_timer_start_periodic(s_roam_timer, ROAM_SCAN_MS * 1000ULL);
+        }
         ESP_LOGI(TAG, "wifi radio on");
     } else {
         s_user_disconnect = true;
@@ -739,6 +939,10 @@ esp_err_t wifi_mgr_set_on(bool on)
         esp_wifi_stop();
         s_radio_on = false;
         s_ap_count = 0;
+        s_miss_cnt = 0;
+        if (s_roam_timer) {
+            esp_timer_stop(s_roam_timer);      /* 关射频就停漫游扫描 */
+        }
         ESP_LOGI(TAG, "wifi radio off (power save)");
     }
     notify();
@@ -795,11 +999,6 @@ void wifi_mgr_forget(void)
 wifi_mgr_state_t wifi_mgr_get_state(void) { return s_state; }
 const char *wifi_mgr_get_ssid(void)       { return s_ssid; }
 const char *wifi_mgr_get_ip(void)         { return s_ip_str; }
-
-int wifi_mgr_last_reason(void)
-{
-    return s_last_reason;
-}
 
 bool wifi_mgr_auth_failed(void) { return s_auth_failed; }
 

@@ -91,11 +91,6 @@ static lv_obj_t *s_cc_bright_val;   /* 亮度数值 */
 static lv_obj_t *s_cc_bt_sw;        /* 蓝牙开关 */
 static lv_obj_t *s_cc_rf_sw;        /* WiFi 射频开关（与 WiFi 卡同步） */
 static lv_obj_t *s_scan_modal;      /* 扫描 WiFi 弹窗 */
-static lv_obj_t *s_scan_loading;    /* 扫描中的加载态（圆环 + 文案） */
-static int       s_wifi_stage_last = -1;   /* 上一次的 WiFi 页状态，用于状态驱动刷新 */
-static lv_obj_t *s_pw_hint;                /* 密码框里的错误提示（红字） */
-static bool      s_pw_waiting;             /* 已点连接，等结果 */
-static int64_t   s_pw_start_ms;            /* 点连接的时刻，用于判定超时 */
 static bool s_wifi_dirty = true;
 static bool s_ap_list_dirty;
 
@@ -884,12 +879,8 @@ static void cc_ap_row_click_cb(lv_event_t *e)
     /* 没存过才弹密码框 */
     strlcpy(s_pw_ssid, ssid, sizeof(s_pw_ssid));
     lv_obj_t *title = (lv_obj_t *)lv_obj_get_user_data(s_pw_modal);
-    lv_label_set_text_fmt(title, "%s", ui_font_safe(ssid, &ui_cjk_16));
+    lv_label_set_text_fmt(title, "连接到 %s", ui_font_safe(ssid, &ui_cjk_16));
     lv_textarea_set_text(s_pw_ta, "");
-    s_pw_waiting = false;
-    if (s_pw_hint) {
-        lv_label_set_text(s_pw_hint, "");
-    }
     lv_obj_remove_flag(s_pw_modal, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_pw_modal);
 }
@@ -977,62 +968,10 @@ static void ap_add_row(const char *ssid, int rssi, bool saved, bool connected)
     }
 }
 
-/* ================= WiFi 页状态机 =================
- * 对齐设计稿 13-wifi-scan：每个状态只对应一套界面（列表 / 加载 / 空 / 已连接 …），
- * 所有可见性、标题、提示都由 wifi_ui_stage() 单点决定，避免散落在各处 if。
- */
-typedef enum {
-    WUS_OFF = 0,        /* 射频关闭 */
-    WUS_SCANNING,       /* 正在扫描（转圈 + 占位） */
-    WUS_LIST,           /* 有扫描结果 */
-    WUS_EMPTY,          /* 扫描结束但一个都没扫到 */
-    WUS_CONNECTING,     /* 正在连接目标 */
-    WUS_CONNECTED,      /* 已连接 */
-    WUS_AUTH_FAIL,      /* 密码错误 */
-} wifi_ui_stage_t;
-
-static wifi_ui_stage_t wifi_ui_stage(void)
-{
-    if (!wifi_mgr_is_on()) {
-        return WUS_OFF;
-    }
-    wifi_mgr_state_t st = wifi_mgr_get_state();
-    if (st == WIFI_MGR_SCANNING) {
-        return WUS_SCANNING;
-    }
-    if (st == WIFI_MGR_CONNECTING) {
-        return WUS_CONNECTING;
-    }
-    if (st == WIFI_MGR_CONNECTED) {
-        return WUS_CONNECTED;
-    }
-    if (wifi_mgr_auth_failed()) {
-        return WUS_AUTH_FAIL;
-    }
-    return WUS_LIST;
-}
-
 static void ap_list_rebuild(void)
 {
     lv_obj_clean(s_cc_ap_list);
     s_row_cnt = 0;
-
-    /* 扫描中：列表位置留给加载态，不显示残留的旧结果 */
-    if (wifi_ui_stage() == WUS_SCANNING) {
-        if (s_scan_loading) {
-            lv_obj_remove_flag(s_scan_loading, LV_OBJ_FLAG_HIDDEN);
-        }
-        if (s_cc_ap_list) {
-            lv_obj_add_flag(s_cc_ap_list, LV_OBJ_FLAG_HIDDEN);
-        }
-        return;
-    }
-    if (s_scan_loading) {
-        lv_obj_add_flag(s_scan_loading, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (s_cc_ap_list) {
-        lv_obj_remove_flag(s_cc_ap_list, LV_OBJ_FLAG_HIDDEN);
-    }
 
     wifi_mgr_ap_info_t aps[16];
     int n = wifi_mgr_get_scan_results(aps, 16);
@@ -1064,7 +1003,7 @@ static void ap_list_rebuild(void)
     }
 
     if (s_row_cnt == 0) {
-        lv_obj_t *empty = ui_label(s_cc_ap_list, "未找到网络，换个位置或点「重新扫描」", &ui_cjk_16, 0x6B7488);
+        lv_obj_t *empty = ui_label(s_cc_ap_list, "没扫到网络，点「重新扫描」再试", NULL, 0x6B7488);
         lv_obj_set_style_pad_left(empty, 6, 0);
     }
 }
@@ -1145,13 +1084,8 @@ static void pw_connect_cb(lv_event_t *e)
         return;
     }
     wifi_mgr_connect(s_pw_ssid, pwd);
-    /* 不立刻关框：等结果再决定（成功关掉，失败留在框里提示重输） */
-    s_pw_waiting = true;
-    s_pw_start_ms = esp_timer_get_time() / 1000;
-    if (s_pw_hint) {
-        lv_label_set_text(s_pw_hint, "正在连接…");
-        lv_obj_set_style_text_color(s_pw_hint, lv_color_hex(0x8FA8CC), 0);
-    }
+    lv_obj_add_flag(s_pw_modal, LV_OBJ_FLAG_HIDDEN);
+    ui_shell_toast("正在连接…");
 }
 /* ---- 控制中心小工具（对齐设计稿：深色卡片 + 青色开关） ---- */
 static lv_obj_t *cc_card(lv_obj_t *parent, int y, int h)
@@ -1258,7 +1192,7 @@ static void build_scan_modal(void)
     lv_obj_set_style_pad_all(panel, 0, 0);
     lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *t = ui_label(panel, "附近网络", &ui_cjk_16, C_TXT);
+    lv_obj_t *t = ui_label(panel, "附近的 WiFi", &ui_cjk_16, C_TXT);
     lv_obj_set_pos(t, 16, 14);
 
     lv_obj_t *x = lv_button_create(panel);
@@ -1284,44 +1218,10 @@ static void build_scan_modal(void)
     lv_obj_set_scroll_dir(s_cc_ap_list, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(s_cc_ap_list, LV_SCROLLBAR_MODE_AUTO);
 
-    /* 扫描中：圆环 + 文案 + 三条占位灰条（对齐设计稿 12/13/14 号状态） */
-    s_scan_loading = lv_obj_create(panel);
-    lv_obj_set_size(s_scan_loading, 408, 268);
-    lv_obj_set_pos(s_scan_loading, 16, 52);
-    lv_obj_set_style_bg_opa(s_scan_loading, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(s_scan_loading, 0, 0);
-    lv_obj_set_style_pad_all(s_scan_loading, 0, 0);
-    lv_obj_clear_flag(s_scan_loading, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(s_scan_loading, LV_OBJ_FLAG_HIDDEN);
-
-    lv_obj_t *sp = lv_spinner_create(s_scan_loading);
-    lv_obj_set_size(sp, 54, 54);
-    lv_obj_align(sp, LV_ALIGN_TOP_MID, 0, 46);
-    lv_obj_set_style_arc_color(sp, col(0x1D3C74), LV_PART_MAIN);
-    lv_obj_set_style_arc_width(sp, 5, LV_PART_MAIN);
-    lv_obj_set_style_arc_color(sp, col(0x22D3EE), LV_PART_INDICATOR);
-    lv_obj_set_style_arc_width(sp, 5, LV_PART_INDICATOR);
-
-    lv_obj_t *lt = ui_label(s_scan_loading, "正在扫描附近网络…", &ui_cjk_16, 0x9AA5B8);
-    lv_obj_align(lt, LV_ALIGN_TOP_MID, 0, 116);
-
-    for (int i = 0; i < 3; i++) {
-        lv_obj_t *ph = lv_obj_create(s_scan_loading);
-        lv_obj_remove_flag(ph, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_size(ph, 380, 40);
-        lv_obj_set_pos(ph, 14, 156 + i * 48);
-        lv_obj_set_style_bg_color(ph, col(0x1E2230), 0);
-        lv_obj_set_style_bg_opa(ph, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(ph, 0, 0);
-        lv_obj_set_style_radius(ph, 10, 0);
-        lv_obj_set_style_pad_all(ph, 0, 0);
-    }
-
-    /* 「重新扫描」：整宽胶囊，贴面板底部（对齐设计稿的青色主按钮） */
     lv_obj_t *again = lv_button_create(panel);
-    lv_obj_set_size(again, 408, 44);
-    lv_obj_set_pos(again, 16, 330);
-    lv_obj_set_style_radius(again, 22, 0);
+    lv_obj_set_size(again, 180, 42);
+    lv_obj_set_pos(again, 130, 330);
+    lv_obj_set_style_radius(again, 12, 0);
     lv_obj_set_style_bg_color(again, col(0x8B5CF6), 0);
     lv_obj_add_event_cb(again, scan_open_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *al = ui_label(again, "重新扫描", &ui_cjk_16, C_TXT);
@@ -1453,7 +1353,7 @@ static void build_control_center(void)
     lv_obj_set_style_pad_all(card, 10, 0);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t *title = ui_label(card, "连接网络", NULL, C_TXT);
+    lv_obj_t *title = ui_label(card, "输入密码", NULL, C_TXT);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 4, 2);
     lv_obj_set_user_data(s_pw_modal, title);
 
@@ -1466,13 +1366,9 @@ static void build_control_center(void)
     lv_obj_set_style_text_font(ta, &lv_font_montserrat_16, 0);
     s_pw_ta = ta;
 
-    /* 错误提示（对齐设计稿 22-24：密码框内红字提示，框不关） */
-    s_pw_hint = ui_label(card, "", &ui_cjk_16, 0xFF6B6B);
-    lv_obj_set_pos(s_pw_hint, 14, 82);
-
     lv_obj_t *kb = lv_keyboard_create(card);
-    lv_obj_set_size(kb, 440, 168);
-    lv_obj_align(kb, LV_ALIGN_TOP_MID, 0, 108);
+    lv_obj_set_size(kb, 440, 190);
+    lv_obj_align(kb, LV_ALIGN_TOP_MID, 0, 84);
     lv_keyboard_set_textarea(kb, ta);
 
     lv_obj_t *cancel = lv_button_create(card);
@@ -1581,50 +1477,6 @@ static void cc_refresh(void)
                 lv_obj_clear_state(s_cc_bt_sw, LV_STATE_CHECKED);
             }
             s_sw_sync = false;
-        }
-    }
-
-    /* WiFi 页：状态变了就整页刷新（扫描开始/结束、连上、密码错…），
-     * 这样列表与加载态不会出现"扫描完了还转圈"这种错位 */
-    {
-        int wst = (int)wifi_ui_stage();
-        if (wst != s_wifi_stage_last) {
-            s_wifi_stage_last = wst;
-            if (s_scan_modal && !lv_obj_has_flag(s_scan_modal, LV_OBJ_FLAG_HIDDEN)) {
-                ap_list_rebuild();
-            }
-        }
-    }
-
-    /* 密码框：等待连接结果（成功关框 / 失败留框提示，对齐设计稿 22-24） */
-    if (s_pw_waiting && s_pw_modal &&
-        !lv_obj_has_flag(s_pw_modal, LV_OBJ_FLAG_HIDDEN)) {
-        wifi_mgr_state_t ws = wifi_mgr_get_state();
-        const char *hint = NULL;
-        if (ws == WIFI_MGR_CONNECTED) {
-            s_pw_waiting = false;
-            lv_obj_add_flag(s_pw_modal, LV_OBJ_FLAG_HIDDEN);
-            ui_shell_toast("已连接");
-        } else if (wifi_mgr_auth_failed()) {
-            hint = "密码错误，请重新输入";
-        } else {
-            int r = wifi_mgr_last_reason();
-            if (r == WIFI_REASON_NO_AP_FOUND) {
-                hint = "找不到该网络，请靠近路由器";
-            } else if (r == WIFI_REASON_ASSOC_FAIL) {
-                hint = "路由器拒绝接入";
-            } else if (r == WIFI_REASON_CONNECTION_FAIL) {
-                hint = "连接超时，请重试";
-            } else if (esp_timer_get_time() / 1000 - s_pw_start_ms > 12000) {
-                hint = "连接超时，请重试";
-            }
-        }
-        if (hint) {
-            s_pw_waiting = false;
-            if (s_pw_hint) {
-                lv_label_set_text(s_pw_hint, hint);
-                lv_obj_set_style_text_color(s_pw_hint, lv_color_hex(0xFF6B6B), 0);
-            }
         }
     }
 

@@ -7,8 +7,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <time.h>
-#include <sys/stat.h>
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -310,25 +308,6 @@ static bool thumb_load(int slot, int idx)
     return true;
 }
 
-/* 缩略图下方的说明：优先显示拍摄日期（对齐设计稿 06-gallery 的"11-21 08:14"），
- * 拿不到 mtime 时退回文件名（去掉扩展名）。 */
-static void photo_caption(const char *name, char *out, size_t n)
-{
-    char path[128];
-    snprintf(path, sizeof(path), "%s/%s", app_storage_root(), name);
-    struct stat st;
-    if (stat(path, &st) == 0 && st.st_mtime > 1735689600) {
-        struct tm tm;
-        time_t t = st.st_mtime;
-        localtime_r(&t, &tm);
-        snprintf(out, n, "%02d-%02d %02d:%02d",
-                 tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min);
-        return;
-    }
-    size_t len = strcspn(name, ".");
-    snprintf(out, n, "%.*s", (int)len, name);
-}
-
 static void build_grid_view(void)
 {
     lv_obj_clean(s_grid);
@@ -385,9 +364,7 @@ static void build_grid_view(void)
         }
         lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
 
-        char cap[24];
-        photo_caption(s_names[idx], cap, sizeof(cap));
-        lv_obj_t *nm = ui_label(cell, cap, NULL, 0xC8D6EA);
+        lv_obj_t *nm = ui_label(cell, s_names[idx], NULL, 0xC8D6EA);
         lv_obj_align(nm, LV_ALIGN_BOTTOM_LEFT, 2, 0);
 
         /* 题目区（图片+名字）点击看大图 */

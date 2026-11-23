@@ -1,15 +1,16 @@
-/* 开机自检：5 项逐项检查 + 进度 + 底部状态条（见 ui_boot.c 顶部说明） */
+/* 开机自检：转圈动画 + 逐项检查（显示 / 触摸 / 系统 / 内存 / 网络 / 相机 / 存储） */
 #pragma once
 
 #include <stdbool.h>
 
-/* 自检项：对齐设计稿 12-self-test 的 5 行 */
 enum {
-    BOOT_CAM = 0,   /* 相机 SC2336（含显示/触摸链路） */
-    BOOT_STORE,     /* TF 卡 / flash 存储 */
-    BOOT_WIFI,      /* WiFi 模块 */
-    BOOT_RTSP,      /* RTSP 服务 */
-    BOOT_MEM,       /* 内存 */
+    BOOT_SYS = 0,
+    BOOT_DISP,
+    BOOT_TOUCH,
+    BOOT_MEM,
+    BOOT_WIFI,
+    BOOT_CAM,
+    BOOT_STORE,
     BOOT_ITEM_CNT
 };
 

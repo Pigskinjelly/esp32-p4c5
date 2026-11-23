@@ -478,9 +478,6 @@ static void camera_tune_color(int fd)
      * 颜色偏差改为在 PPA 输出端做 YUV 范围/标准选择处理。 */
 }
 
-/* 触摸是否可用：并入「相机」自检项展示 */
-static bool s_touch_ok;
-
 /* 本次启动的复位信息：runlog 要等 TF 卡挂载完才能写，先存着 */
 static int      s_boot_rst;
 static uint32_t s_boot_count;
@@ -535,9 +532,7 @@ static void boot_check_task(void *arg)
         }
         vTaskDelay(pdMS_TO_TICKS(100));
     }
-    ui_boot_check_mark(BOOT_CAM, cam, cam ? (s_touch_ok ? "480x480 · 触摸 OK"
-                                                         : "480x480 · 无触摸")
-                                          : "I2C 无响应");
+    ui_boot_check_mark(BOOT_CAM, cam, cam ? "已出图" : "无画面");
 
     /* 网络：最多等 4 秒（连接慢的不阻塞开机，后面状态栏会更新） */
     bool wifi = false;
@@ -790,13 +785,15 @@ void app_main(void)
     ui_apps_register_all();
     ESP_ERROR_CHECK(ui_shell_start(display_panel, touch));
 
-    /* 自检：显示/触摸并入「相机」项展示（设计稿只有 5 行），其余项由后台任务补齐 */
-    s_touch_ok = (touch != NULL);
+    /* 自检：显示 / 触摸已确定，其余项由后台任务补齐 */
+    ui_boot_check_mark(BOOT_DISP, true, "480x480");
+    ui_boot_check_mark(BOOT_TOUCH, touch != NULL, touch ? "ST7123" : "无触摸");
     xTaskCreate(boot_check_task, "boot_chk", 4096, NULL, 2, NULL);
 
     /* 5. 网络基础：lwip 与默认事件循环是 socket/RTSP 的前提 */
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ui_boot_check_mark(BOOT_SYS, true, "网络栈就绪");
 
     /* 6. Wi-Fi（自动重连上次 WiFi；控制中心可改） */
     esp_err_t net_ret = wifi_mgr_init();
@@ -811,10 +808,7 @@ void app_main(void)
     trade_day_init();
 
     /* 7. RTSP 服务 */
-    esp_err_t rtsp_ret = rtsp_server_start(RTSP_PORT);
-    ui_boot_check_mark(BOOT_RTSP, rtsp_ret == ESP_OK,
-                       rtsp_ret == ESP_OK ? "0.0.0.0:554" : "启动失败");
-    ESP_ERROR_CHECK(rtsp_ret);
+    ESP_ERROR_CHECK(rtsp_server_start(RTSP_PORT));
 
     /* 8. 音频（失败不阻断） */
     s_audio_ok = (app_audio_init(i2c_bus) == ESP_OK);
@@ -826,7 +820,7 @@ void app_main(void)
     esp_err_t ret = app_video_main(i2c_bus);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "video init failed: 0x%x（UI 与 Wi-Fi 仍可用）", ret);
-        ui_boot_check_mark(BOOT_CAM, false, "I2C 无响应");
+        ui_boot_check_mark(BOOT_CAM, false, "初始化失败");
         /* 4096：心跳里还要格式化运行日志（栈上 ~550B），3072 太紧 */
         xTaskCreate(heartbeat_task, "heartbeat", 4096, NULL, 3, NULL);
         return;
@@ -835,7 +829,7 @@ void app_main(void)
     int video_fd = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
     if (video_fd < 0) {
         ESP_LOGE(TAG, "camera open failed");
-        ui_boot_check_mark(BOOT_CAM, false, "打开失败 · 无画面");
+        ui_boot_check_mark(BOOT_CAM, false, "打开失败");
         xTaskCreate(heartbeat_task, "heartbeat", 4096, (void *)1, 3, NULL);
         return;
     }
@@ -958,8 +952,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     static bool s_first_frame_reported;
     if (!s_first_frame_reported) {
         s_first_frame_reported = true;
-        ui_boot_check_mark(BOOT_CAM, true, s_touch_ok ? "480x480 · 触摸 OK"
-                                                      : "480x480 · 无触摸");
+        ui_boot_check_mark(BOOT_CAM, true, "已出图");
         ESP_LOGI(TAG, "first camera frame %ux%u", (unsigned)camera_buf_hes,
                  (unsigned)camera_buf_ves);
     }
