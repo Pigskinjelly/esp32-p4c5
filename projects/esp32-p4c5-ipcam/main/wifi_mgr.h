@@ -88,6 +88,10 @@ const char      *wifi_mgr_state_str(wifi_mgr_state_t st);
 /** 最近一次连接失败是否是密码/认证问题（UI 用来提示"密码错误"） */
 bool             wifi_mgr_auth_failed(void);
 
+/** 最近一次断开原因（wifi_err_reason_t，-1 表示还没有过断开事件）。
+ *  用于 UI 区分"密码错误 / 找不到 AP / 超时 / 被拒绝"，见 wifi_ui_stage()。 */
+int              wifi_mgr_last_reason(void);
+
 #ifdef __cplusplus
 }
 #endif

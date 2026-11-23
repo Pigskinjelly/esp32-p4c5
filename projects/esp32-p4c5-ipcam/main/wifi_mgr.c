@@ -40,6 +40,7 @@ static int  s_retry;
 static bool s_user_disconnect;      /* 用户主动断开：不再自动重连 */
 static bool s_radio_on = true;   /* WiFi 射频开关状态 */
 static bool s_auth_failed;          /* 最近一次失败是密码/认证问题 */
+static int  s_last_reason = -1;     /* 最近一次断开原因（wifi_err_reason_t） */
 static int  s_auth_fail_cnt;        /* 连续认证失败次数 */
 static esp_timer_handle_t s_retry_timer;
 static esp_timer_handle_t s_scan_timer;
@@ -295,6 +296,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t *ev = (wifi_event_sta_disconnected_t *)data;
         int reason = ev ? ev->reason : -1;
+        s_last_reason = reason;
         if (s_state == WIFI_MGR_CONNECTED) {
             ESP_LOGW(TAG, "connection lost (reason %d)", reason);
         }
@@ -793,6 +795,11 @@ void wifi_mgr_forget(void)
 wifi_mgr_state_t wifi_mgr_get_state(void) { return s_state; }
 const char *wifi_mgr_get_ssid(void)       { return s_ssid; }
 const char *wifi_mgr_get_ip(void)         { return s_ip_str; }
+
+int wifi_mgr_last_reason(void)
+{
+    return s_last_reason;
+}
 
 bool wifi_mgr_auth_failed(void) { return s_auth_failed; }
 
