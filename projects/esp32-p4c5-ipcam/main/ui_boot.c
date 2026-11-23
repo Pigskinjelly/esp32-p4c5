@@ -75,9 +75,16 @@ static void boot_ui_destroy(void)
         lv_timer_del(s_timer);
         s_timer = NULL;
     }
+    /* 关键：必须真正删掉整层。
+     * 只把指针置 NULL 的话，这层 480x480 的透明浮层会一直盖在 layer_top 上，
+     * 而且默认是 CLICKABLE —— 结果是整屏点击全部被它吃掉，表现为"触摸失灵"。
+     * （上一轮重写时漏了这一句，这里补回并加了注释防止再犯） */
+    if (s_root) {
+        lv_obj_delete(s_root);
+        s_root = NULL;
+    }
     memset(s_dots, 0, sizeof(s_dots));
     memset(s_vals, 0, sizeof(s_vals));
-    s_root = NULL;
     s_prog = NULL;
     s_bar = NULL;
     s_hint = NULL;
@@ -87,6 +94,8 @@ static void boot_fade_done(lv_anim_t *a)
 {
     (void)a;
     boot_ui_destroy();
+    /* 有这条日志就说明整层真的删掉了；缺失则说明浮层还在，会吞触摸 */
+    ESP_LOGI(TAG, "boot overlay removed");
 }
 
 static uint32_t stage_color(boot_stage_t st)
@@ -309,7 +318,8 @@ void ui_boot_check_begin(void)
     s_hint = ui_label(s_root, "正在自检…", &ui_cjk_16, 0x8FA8CC);
     lv_obj_set_pos(s_hint, 24, 332);
 
-    lv_obj_t *ver = ui_label(s_root, "ESP32-P4C5 · 开机自检", &lv_font_montserrat_14, 0x4E5D78);
+    /* 这一行原先是 montserrat_14，只能渲染 ASCII，中文会显示成方框 */
+    lv_obj_t *ver = ui_label(s_root, "ESP32-P4C5", &lv_font_montserrat_14, 0x4E5D78);
     lv_obj_set_pos(ver, 24, 362);
 
     lv_obj_t *skip = lv_button_create(s_root);
