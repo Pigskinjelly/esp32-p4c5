@@ -130,19 +130,32 @@ static void rot_btn_cb(lv_event_t *e)
 
 static void bt_switch_cb(lv_event_t *e)
 {
+    esp_err_t err = ESP_OK;
     lv_obj_t *sw = lv_event_get_target(e);
     bool on = lv_obj_has_state(sw, LV_STATE_CHECKED);
-    esp_err_t err = bt_mgr_set(on);
-    if (err != ESP_OK) {
-        ui_shell_toast(bt_mgr_available() ? "蓝牙切换失败" : "固件未编译蓝牙");
-        if (on) {
-            lv_obj_clear_state(sw, LV_STATE_CHECKED);
-        } else {
-            lv_obj_add_state(sw, LV_STATE_CHECKED);
-        }
-        return;
+
+    if (!bt_mgr_available()) {
+        ui_shell_toast("固件未编译蓝牙");
+        goto rollback;
     }
-    ui_shell_toast(on ? "蓝牙已开启" : "蓝牙已关闭");
+    err = bt_mgr_set(on);   /* 异步：只投递，不阻塞 UI */
+    if (err == ESP_ERR_INVALID_STATE) {
+        ui_shell_toast("正在切换中，请稍候");
+        goto rollback;
+    }
+    if (err != ESP_OK) {
+        ui_shell_toast(err == ESP_ERR_NO_MEM ? "资源不足，蓝牙未开启" : "蓝牙切换失败");
+        goto rollback;
+    }
+    ui_shell_toast(on ? "正在开启蓝牙…" : "正在关闭蓝牙…");
+    return;
+
+rollback:
+    if (on) {
+        lv_obj_clear_state(sw, LV_STATE_CHECKED);
+    } else {
+        lv_obj_add_state(sw, LV_STATE_CHECKED);
+    }
 }
 
 static void idle_btn_refresh(void)
@@ -619,22 +632,6 @@ static void create(lv_obj_t *parent)
     lv_obj_align(s_lbl_uptime, LV_ALIGN_RIGHT_MID, -4, 0);
     y += step;
 
-    /* 亮度 */
-    lv_obj_t *br = ui_card(sc, 456, h, C_BG_CARD);
-    lv_obj_set_pos(br, 12, y);
-    lv_obj_t *bk = ui_label(br, "亮度", &ui_cjk_16, C_TXT_DIM);
-    lv_obj_align(bk, LV_ALIGN_LEFT_MID, 4, 0);
-    s_slider = lv_slider_create(br);
-    lv_obj_set_size(s_slider, 280, 16);
-    lv_obj_align(s_slider, LV_ALIGN_RIGHT_MID, -4, 0);
-    lv_slider_set_range(s_slider, 5, 100);
-    lv_slider_set_value(s_slider, ui_shell_get_brightness(), LV_ANIM_OFF);
-    lv_obj_add_event_cb(s_slider, brightness_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_set_style_bg_color(s_slider, col(0x1D3C74), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_slider, col(C_ACCENT), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider, col(C_TXT), LV_PART_KNOB);
-    y += step;
-
     /* 音量 */
     lv_obj_t *vol = ui_card(sc, 456, h, C_BG_CARD);
     lv_obj_set_pos(vol, 12, y);
@@ -653,48 +650,6 @@ static void create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(vs, col(0x1D3C74), LV_PART_MAIN);
     lv_obj_set_style_bg_color(vs, col(C_ACCENT), LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(vs, col(C_TXT), LV_PART_KNOB);
-    y += step;
-
-    /* 待机时间（无操作多久自动进锁屏） */
-    lv_obj_t *idle = ui_card(sc, 456, h, C_BG_CARD);
-    lv_obj_set_pos(idle, 12, y);
-    lv_obj_t *ik = ui_label(idle, "待机", &ui_cjk_16, C_TXT_DIM);
-    lv_obj_align(ik, LV_ALIGN_LEFT_MID, 4, 0);
-
-    static const char *idle_txt[5] = { "30秒", "1分", "2分", "5分", "永不" };
-    for (int i = 0; i < 5; i++) {
-        lv_obj_t *b = lv_button_create(idle);
-        lv_obj_set_size(b, 64, 30);
-        lv_obj_align(b, LV_ALIGN_RIGHT_MID, -4 - (4 - i) * 68, 0);
-        lv_obj_set_style_radius(b, 8, 0);
-        lv_obj_set_style_pad_all(b, 0, 0);
-        lv_obj_add_event_cb(b, idle_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
-        lv_obj_t *l = ui_label(b, idle_txt[i], &ui_cjk_16, C_TXT);
-        lv_obj_center(l);
-        s_idle_btns[i] = b;
-    }
-    idle_btn_refresh();
-    y += step;
-
-    /* 蓝牙开关 */
-    lv_obj_t *bt = ui_card(sc, 456, h, C_BG_CARD);
-    lv_obj_set_pos(bt, 12, y);
-    lv_obj_t *btk = ui_label(bt, "蓝牙", NULL, C_TXT_DIM);
-    lv_obj_align(btk, LV_ALIGN_LEFT_MID, 4, 0);
-    s_sw_bt = lv_switch_create(bt);
-    lv_obj_set_size(s_sw_bt, 60, 28);
-    lv_obj_align(s_sw_bt, LV_ALIGN_RIGHT_MID, -4, 0);
-    lv_obj_set_style_bg_color(s_sw_bt, col(0x1D3C74), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_sw_bt, col(C_ACCENT), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_sw_bt, col(C_TXT), LV_PART_KNOB);
-    lv_obj_add_event_cb(s_sw_bt, bt_switch_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    if (bt_mgr_is_on()) {
-        lv_obj_add_state(s_sw_bt, LV_STATE_CHECKED);
-    }
-    if (!bt_mgr_available()) {
-        lv_obj_add_state(s_sw_bt, LV_STATE_DISABLED);
-        lv_obj_set_style_opa(s_sw_bt, LV_OPA_40, 0);
-    }
     y += step;
 
     /* 显示方向：横 / 纵 / 横反 / 纵反 —— 整个 UI 一起转 */
@@ -716,29 +671,6 @@ static void create(lv_obj_t *parent)
     }
     rot_btn_refresh();
     y += step;
-
-    /* 相机分辨率（重启后生效） */
-    {
-        lv_obj_t *rc = ui_card(sc, 456, h, C_BG_CARD);
-        lv_obj_set_pos(rc, 12, y);
-        lv_obj_t *lk = ui_label(rc, "分辨率", NULL, C_TXT_DIM);
-        lv_obj_align(lk, LV_ALIGN_LEFT_MID, 4, 0);
-        static const char *rt[2] = { "720P", "800方" };
-        for (int i = 0; i < 2; i++) {
-            lv_obj_t *b = lv_button_create(rc);
-            lv_obj_set_size(b, 76, 30);
-            lv_obj_align(b, LV_ALIGN_RIGHT_MID, -4 - (1 - i) * 82, 0);
-            lv_obj_set_style_radius(b, 8, 0);
-            lv_obj_set_style_pad_all(b, 0, 0);
-            lv_obj_set_style_bg_color(b, col(0x16203A), 0);
-            lv_obj_add_event_cb(b, res_btn_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
-            lv_obj_t *l = ui_label(b, rt[i], NULL, C_TXT);
-            lv_obj_center(l);
-            s_res_btns[i] = b;
-        }
-        cam_cfg_refresh();
-        y += step;
-    }
 
     /* 相机帧率（重启后生效） */
     {

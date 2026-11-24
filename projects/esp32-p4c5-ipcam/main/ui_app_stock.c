@@ -41,7 +41,7 @@ static const char *TAG = "ui_stock";
 #define MAX_IDX     6      /* 左栏最多 6 个指数（可滚动） */
 
 /* 市场：A 股 / 美股。版式完全一样，只是数据源、时区、默认指数不同 */
-typedef enum { MKT_A = 0, MKT_US = 1 } mkt_t;
+typedef enum { MKT_A = 0, MKT_US = 1, MKT_HK = 2 } mkt_t;
 static mkt_t s_mkt = MKT_A;
 
 /* ================= 数据 ================= */
@@ -72,6 +72,9 @@ static const char *A_IDX_DEF[][2] = {
 static const char *US_IDX_DEF[][2] = {
     { "usDJI", "道琼斯" }, { "usNDX", "纳指100" }, { "usINX", "标普500" },
 };
+static const char *HK_IDX_DEF[][2] = {
+    { "hkHSI", "恒生指数" }, { "hkHSTECH", "恒生科技" },
+};
 
 static quote_t s_idx[MAX_IDX];      /* 左栏：指数 */
 static int s_idx_cnt;
@@ -95,15 +98,17 @@ static void row_release_cb(lv_event_t *e);
 static void mkt_switch_cb(lv_event_t *e);
 static void kperiod_cb(lv_event_t *e);
 static void mkt_load(void);
+static const char *mkt_tag(void);
 static void rebuild_idx(void);
 static void rebuild_list(void);
 static void open_idx_detail(int idx);
-static lv_obj_t *s_mkt_btn[2];
+static lv_obj_t *s_mkt_btn[3];
 static void fetch_now(void);
 static void open_detail(int idx);
 static void detail_refresh(void);
 static void alist_rebuild(void);
 static void alist_open(const char *secid);
+static void alist_set_mode(int mode);
 static void alist_price_refresh(void);
 static lv_obj_t *s_alist;
 
@@ -129,6 +134,21 @@ static const char *trade_status_a(struct tm *t, uint32_t *color)
     if (m >= 13 * 60 && m < 14 * 60 + 57)         { *color = 0x37E8A0; return "交易中"; }
     if (m >= 14 * 60 + 57 && m < 15 * 60)         { *color = 0xE8C537; return "竞价"; }
     if (m >= 15 * 60 && m < 15 * 60 + 30)         { *color = 0xB08CE8; return "盘后"; }
+    *color = 0x8FA8CC;
+    return "已收盘";
+}
+
+static const char *trade_status_hk(struct tm *t, uint32_t *color)
+{
+    if (t->tm_wday == 0 || t->tm_wday == 6) {
+        *color = 0x8FA8CC;
+        return "休市";
+    }
+    int m = t->tm_hour * 60 + t->tm_min;
+    if (m >= 9 * 60 && m < 9 * 60 + 30)         { *color = 0xE8C537; return "竞价"; }
+    if (m >= 9 * 60 + 30 && m < 12 * 60)        { *color = 0x37E8A0; return "交易中"; }
+    if (m >= 12 * 60 && m < 13 * 60)            { *color = 0xE8A537; return "午休"; }
+    if (m >= 13 * 60 && m < 16 * 60)            { *color = 0x37E8A0; return "交易中"; }
     *color = 0x8FA8CC;
     return "已收盘";
 }
@@ -193,6 +213,9 @@ static const char *trade_status(struct tm *local, uint32_t *color)
         to_us_east(time(NULL), &et);
         return trade_status_us(&et, color);
     }
+    if (s_mkt == MKT_HK) {
+        return trade_status_hk(local, color);
+    }
     return trade_status_a(local, color);
 }
 
@@ -210,6 +233,10 @@ static const char *A_WATCH_DEF[][2] = {
 static const char *US_WATCH_DEF[][2] = {
     { "usAAPL", "苹果" }, { "usNVDA", "英伟达" },
     { "usTSLA", "特斯拉" }, { "usMSFT", "微软" },
+};
+static const char *HK_WATCH_DEF[][2] = {
+    { "hk00700", "腾讯控股" }, { "hk09988", "阿里巴巴" },
+    { "hk03690", "美团" },
 };
 
 static void list_save(const char *key, const quote_t *arr, int cnt)
@@ -284,7 +311,8 @@ static int list_load(const char *key, quote_t *arr, int max,
 
 static void watch_save(void)
 {
-    list_save(s_mkt == MKT_A ? "alist" : "ulist", s_watch, s_watch_cnt);
+    list_save(s_mkt == MKT_A ? "alist" : (s_mkt == MKT_HK ? "hlist" : "ulist"),
+              s_watch, s_watch_cnt);
 }
 
 static void watch_load(void)
@@ -299,15 +327,18 @@ static void watch_load(void)
                 list_save("alist", s_watch, s_watch_cnt);
             }
         }
+    } else if (s_mkt == MKT_HK) {
+        s_watch_cnt = list_load("hlist", s_watch, MAX_WATCH, HK_WATCH_DEF, 3);
     } else {
         s_watch_cnt = list_load("ulist", s_watch, MAX_WATCH, US_WATCH_DEF, 4);
     }
-    ESP_LOGI(TAG, "watchlist(%s): %d", s_mkt == MKT_A ? "A" : "US", s_watch_cnt);
+    ESP_LOGI(TAG, "watchlist(%s): %d", mkt_tag(), s_watch_cnt);
 }
 
 static void idx_save(void)
 {
-    list_save(s_mkt == MKT_A ? "aidx" : "uidx", s_idx, s_idx_cnt);
+    list_save(s_mkt == MKT_A ? "aidx" : (s_mkt == MKT_HK ? "hidx" : "uidx"),
+              s_idx, s_idx_cnt);
 }
 
 static void idx_load(void)
@@ -332,10 +363,12 @@ static void idx_load(void)
 
     if (s_mkt == MKT_A) {
         s_idx_cnt = list_load("aidx", s_idx, MAX_IDX, A_IDX_DEF, 4);
+    } else if (s_mkt == MKT_HK) {
+        s_idx_cnt = list_load("hidx", s_idx, MAX_IDX, HK_IDX_DEF, 2);
     } else {
         s_idx_cnt = list_load("uidx", s_idx, MAX_IDX, US_IDX_DEF, 3);
     }
-    ESP_LOGI(TAG, "index(%s): %d", s_mkt == MKT_A ? "A" : "US", s_idx_cnt);
+    ESP_LOGI(TAG, "index(%s): %d", mkt_tag(), s_idx_cnt);
 }
 
 static void code_to_secid(const char *code, char *secid, size_t sz)
@@ -351,6 +384,11 @@ static void code_to_secid(const char *code, char *secid, size_t sz)
             *p = (char)toupper((unsigned char)*p);
         }
         snprintf(secid, sz, "us%.9s", tmp);
+        return;
+    }
+    if (s_mkt == MKT_HK) {
+        const char *c = (strncasecmp(code, "hk", 2) == 0) ? code + 2 : code;
+        snprintf(secid, sz, "hk%05d", atoi(c));      /* 700 -> hk00700 */
         return;
     }
     const char *mkt = (code[0] == '6' || code[0] == '9' || code[0] == '5') ? "sh" : "sz";
@@ -379,6 +417,20 @@ static int decimals_of(const char *s)
 }
 
 /* 按位数格式化价格（lv_label_set_text_fmt 不支持 "%.*f"，先用 stdio 拼好） */
+/* 场内基金（ETF/LOF）：价格习惯保留 3 位小数。
+ * 接口有时返回 "1.23"（末尾 0 被省掉），靠 decimals_of 只能判成 2 位，
+ * 所以这里按代码段兜一层。 */
+static bool is_fund(const char *secid)
+{
+    if (!secid || strlen(secid) < 8) {
+        return false;
+    }
+    const char *c = secid + 2;                 /* 跳过 sh / sz */
+    return !strncmp(c, "51", 2) || !strncmp(c, "56", 2) || !strncmp(c, "58", 2) ||
+           !strncmp(c, "50", 2) || !strncmp(c, "15", 2) || !strncmp(c, "16", 2) ||
+           !strncmp(c, "18", 2);
+}
+
 static void fmt_price(char *buf, size_t cap, float v, int dec)
 {
     snprintf(buf, cap, "%.*f", (dec >= 2 && dec <= 4) ? dec : 2, v);
@@ -1029,6 +1081,35 @@ static quote_t *detail_quote(void)
     }
     return (s_detail_kind == 1) ? &s_idx[s_detail_idx] : &s_watch[s_detail_idx];
 }
+static void detail_open(int kind, int idx);
+/* 详情页里直接切上一只/下一只（同类之间循环） */
+static void dt_step(int delta)
+{
+    int cnt = (s_detail_kind == 1) ? s_idx_cnt : s_watch_cnt;
+    if (cnt <= 1 || s_detail_idx < 0) {
+        return;
+    }
+    int ni = s_detail_idx + delta;
+    if (ni < 0) {
+        ni = cnt - 1;
+    } else if (ni >= cnt) {
+        ni = 0;
+    }
+    detail_open(s_detail_kind, ni);
+}
+
+static void dt_prev_cb(lv_event_t *e)
+{
+    (void)e;
+    dt_step(-1);
+}
+
+static void dt_next_cb(lv_event_t *e)
+{
+    (void)e;
+    dt_step(1);
+}
+
 static char s_alist_filter[12];     /* 空串 = 显示全部 */
 static char s_ae_secid[12];
 static uint8_t s_ae_dec;
@@ -1254,8 +1335,8 @@ static void stock_poll_cb(void *arg)
 
 #define KBAR_MAX     180      /* 最多保留 180 根日K（可往前翻） */
 #define KVIEW_DEF     50      /* 一屏显示多少根 */
-#define KCH_W        380      /* 画布宽（= 绘图区，右侧留白） */
-#define KCH_H        196      /* 画布高 */
+#define KCH_W        392      /* 画布宽（左右各留白，不贴边） */
+#define KCH_H        204      /* 画布高：铃铛移到右上后，底部空间全部给图表 */
 #define KAXIS_W       52      /* 卡片内左侧刻度区宽度（画布从这里开始） */
 
 typedef struct {
@@ -1869,6 +1950,16 @@ static int em_candidates(const char *sym, char out[][16], int max)
         }
         return n;
     }
+    if (strncmp(sym, "hk", 2) == 0) {
+        const char *c = sym + 2;
+        /* 港股指数是字母开头（HSI/HSTECH，市场号 100），个股是 5 位数字（116） */
+        if (c[0] >= 'A' && c[0] <= 'Z') {
+            snprintf(out[n++], 16, "100.%s", c);
+        } else {
+            snprintf(out[n++], 16, "116.%s", c);
+        }
+        return n;
+    }
     if (strncmp(sym, "sh", 2) == 0) {
         snprintf(out[n++], 16, "1.%s", sym + 2);
         return n;
@@ -2257,6 +2348,9 @@ static void detail_refresh(void)
         kline_request(q->ksym);
     }
     int dec = (q->dec >= 2 && q->dec <= 4) ? q->dec : 2;
+    if (is_fund(q->secid) && dec < 3) {
+        dec = 3;                    /* ETF/LOF 固定 3 位，避免"1.23"看起来像少了一位 */
+    }
     char b[48];
 
     if (s_ksel >= 0 && s_ksel < s_kbar_n) {
@@ -2274,7 +2368,7 @@ static void detail_refresh(void)
         lv_label_set_text(s_dt_chg, b);
         lv_obj_set_style_text_color(s_dt_chg, col(pct_color(pct)), 0);
 
-        static const char *hk[6] = { "开盘", "收盘", "最高", "最低", "成交量", "涨跌幅" };
+        static const char *hk[6] = { "开盘", "收盘", "最高", "最低", "成交量/万", "涨跌幅" };
         for (int i = 0; i < 6; i++) {
             if (s_dt_key[i]) {
                 lv_label_set_text(s_dt_key[i], hk[i]);
@@ -2289,9 +2383,9 @@ static void detail_refresh(void)
         fmt_price(b, sizeof(b), k->l, dec);
         lv_label_set_text(s_dt_cell[3], b);
         if (k->v >= 10000.0f) {
-            snprintf(b, sizeof(b), "%.2f万手", k->v / 10000.0f);
+            snprintf(b, sizeof(b), "%.2f", k->v / 10000.0f);
         } else if (k->v > 0.0f) {
-            snprintf(b, sizeof(b), "%.0f手", k->v);
+            snprintf(b, sizeof(b), "%.0f", k->v);
         } else {
             snprintf(b, sizeof(b), "--");
         }
@@ -2303,7 +2397,7 @@ static void detail_refresh(void)
     }
 
     if (s_dt_key[0]) {
-        static const char *lk[6] = { "今开", "昨收", "最高", "最低", "成交量", "成交额" };
+        static const char *lk[6] = { "今开", "昨收", "最高", "最低", "成交量/万", "成交额/亿" };
         for (int i = 0; i < 6; i++) {
             lv_label_set_text(s_dt_key[i], lk[i]);
         }
@@ -2330,24 +2424,25 @@ static void detail_refresh(void)
     lv_label_set_text(s_dt_cell[2], b);
     fmt_price(b, sizeof(b), q->low, dec);
     lv_label_set_text(s_dt_cell[3], b);
+    /* 单位写在标签里，数值只留纯数字（20px 数字字体没有汉字） */
     if (s_mkt == MKT_US) {
         if (q->vol >= 1e8f) {
-            snprintf(b, sizeof(b), "%.2f亿股", q->vol / 1e8f);
+            snprintf(b, sizeof(b), "%.0f", q->vol / 1e4f);
         } else {
-            snprintf(b, sizeof(b), "%.0f万股", q->vol / 1e4f);
+            snprintf(b, sizeof(b), "%.0f", q->vol / 1e4f);
         }
     } else if (q->vol >= 10000.0f) {
-        snprintf(b, sizeof(b), "%.2f万手", q->vol / 10000.0f);
+        snprintf(b, sizeof(b), "%.2f", q->vol / 10000.0f);
     } else {
-        snprintf(b, sizeof(b), "%.0f手", q->vol);
+        snprintf(b, sizeof(b), "%.0f", q->vol);
     }
     lv_label_set_text(s_dt_cell[4], b);
     if (s_mkt == MKT_US) {
-        snprintf(b, sizeof(b), "%.2f亿$", q->amt / 1e8f);
+        snprintf(b, sizeof(b), "%.2f", q->amt / 1e8f);
     } else if (q->amt >= 10000.0f) {
-        snprintf(b, sizeof(b), "%.2f亿", q->amt / 10000.0f);
+        snprintf(b, sizeof(b), "%.2f", q->amt / 10000.0f);
     } else {
-        snprintf(b, sizeof(b), "%.0f万", q->amt);
+        snprintf(b, sizeof(b), "%.0f", q->amt);
     }
     lv_label_set_text(s_dt_cell[5], b);
 
@@ -2388,55 +2483,84 @@ static void build_detail(lv_obj_t *parent)
     lv_obj_clear_flag(s_detail, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(s_detail, LV_OBJ_FLAG_HIDDEN);
 
+    /* 右侧三个按钮：× 关闭 / < 上一只 / > 下一只
+     * 统一 40×40、圆角 20、间距 4，与右边 46 的铃铛垂直居中（中心都在 y=23） */
     lv_obj_t *back = lv_button_create(s_detail);
-    lv_obj_set_size(back, 90, 38);
-    lv_obj_set_pos(back, 10, 3);
-    lv_obj_set_style_radius(back, 19, 0);
+    lv_obj_set_size(back, 40, 40);
+    lv_obj_set_pos(back, 374, 3);
+    lv_obj_set_style_radius(back, 20, 0);
     lv_obj_set_style_pad_all(back, 0, 0);
     lv_obj_set_style_bg_color(back, col(0x1E2C4E), 0);
     lv_obj_add_event_cb(back, detail_close_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *bl = ui_label(back, "返回", &ui_cjk_16, C_TXT);
+    lv_obj_t *bl = ui_label(back, "×", &lv_font_montserrat_24, C_TXT);
     lv_obj_center(bl);
 
-    s_dt_name = ui_label(s_detail, "-", &ui_cjk_24, C_TXT);
-    lv_obj_set_pos(s_dt_name, 112, 6);
-    s_dt_code = ui_label(s_detail, "", NULL, C_TXT_DIM);
-    lv_obj_align(s_dt_code, LV_ALIGN_TOP_RIGHT, -14, 14);
+    for (int i = 0; i < 2; i++) {
+        lv_obj_t *b = lv_button_create(s_detail);
+        lv_obj_set_size(b, 40, 40);
+        lv_obj_set_pos(b, 374 + i * 44, 50);      /* 铃铛正下方独立一行 */
+        lv_obj_set_style_radius(b, 20, 0);
+        lv_obj_set_style_pad_all(b, 0, 0);
+        lv_obj_set_style_bg_color(b, col(0x16203A), 0);
+        lv_obj_add_event_cb(b, i ? dt_next_cb : dt_prev_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_t *l = ui_label(b, i ? ">" : "<", NULL, 0x9DBCE0);
+        lv_obj_set_style_text_font(l, &lv_font_montserrat_20, 0);
+        lv_obj_center(l);
+    }
+
+    /* 名称和代码放一行 flex：代码自动紧跟名称，名字长短都不会留空或重叠 */
+    lv_obj_t *title = lv_obj_create(s_detail);
+    lv_obj_set_size(title, 290, 40);
+    lv_obj_set_pos(title, 12, 3);
+    lv_obj_set_style_bg_opa(title, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(title, 0, 0);
+    lv_obj_set_style_pad_all(title, 0, 0);
+    lv_obj_clear_flag(title, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(title, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(title, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(title, 8, 0);
+
+    s_dt_name = ui_label(title, "-", &ui_cjk_24, C_TXT);
+    lv_obj_set_style_text_font(s_dt_name, &ui_cjk_24, 0);
+    s_dt_code = ui_label(title, "", NULL, C_TXT_DIM);
 
     s_dt_price = lv_label_create(s_detail);
     lv_label_set_text(s_dt_price, "----");
     lv_obj_set_style_text_font(s_dt_price, &lv_font_montserrat_32, 0);
     lv_obj_set_style_text_color(s_dt_price, col(C_TXT), 0);
-    lv_obj_set_pos(s_dt_price, 14, 44);
+    lv_obj_set_pos(s_dt_price, 14, 46);
 
     s_dt_chg = ui_label(s_detail, "--", &ui_cjk_16, C_TXT_DIM);
-    lv_obj_align(s_dt_chg, LV_ALIGN_TOP_RIGHT, -14, 58);
+    lv_obj_set_pos(s_dt_chg, 16, 88);
 
-    /* 6 个数据格：3 列 × 2 行 */
-    static const char *k1[3] = { "今开", "最高", "成交量" };
-    static const char *k2[3] = { "昨收", "最低", "成交额" };
+    /* 6 个数据格：3 列 × 2 行
+     * 标签定宽 52、数值定宽 82 且超出省略 —— 「成交量/成交额」和数字
+     * 原来两端对齐会挤在一起，看着像叠字。 */
+    static const char *k1[3] = { "今开", "最高", "成交量/万" };
+    static const char *k2[3] = { "昨收", "最低", "成交额/亿" };
     for (int i = 0; i < 3; i++) {
-        int x = 12 + i * 153;
-        lv_obj_t *c1 = ui_card(s_detail, 150, 34, C_BG_CARD);
-        lv_obj_set_style_pad_all(c1, 2, 0);
-        lv_obj_set_pos(c1, x, 88);
-        s_dt_key[i * 2] = ui_label(c1, k1[i], NULL, C_TXT_DIM);
-        lv_obj_align(s_dt_key[i * 2], LV_ALIGN_LEFT_MID, 6, 0);
-        s_dt_cell[i * 2] = ui_label(c1, "--", NULL, C_TXT);
-        lv_obj_align(s_dt_cell[i * 2], LV_ALIGN_RIGHT_MID, -6, 0);
+        int x = 12 + i * 152;
+        for (int row = 0; row < 2; row++) {
+            lv_obj_t *c = ui_card(s_detail, 150, 42, C_BG_CARD);
+            lv_obj_set_style_pad_all(c, 2, 0);
+            lv_obj_set_pos(c, x, 136 + row * 45);
 
-        lv_obj_t *c2 = ui_card(s_detail, 150, 34, C_BG_CARD);
-        lv_obj_set_style_pad_all(c2, 2, 0);
-        lv_obj_set_pos(c2, x, 126);
-        s_dt_key[i * 2 + 1] = ui_label(c2, k2[i], NULL, C_TXT_DIM);
-        lv_obj_align(s_dt_key[i * 2 + 1], LV_ALIGN_LEFT_MID, 6, 0);
-        s_dt_cell[i * 2 + 1] = ui_label(c2, "--", NULL, C_TXT);
-        lv_obj_align(s_dt_cell[i * 2 + 1], LV_ALIGN_RIGHT_MID, -6, 0);
+            int slot = i * 2 + row;
+            /* 标签在上、数值在下 —— 和行情模块一致，横向不再挤 */
+            s_dt_key[slot] = ui_label(c, row ? k2[i] : k1[i], NULL, 0x7A8BA8);
+            lv_obj_align(s_dt_key[slot], LV_ALIGN_TOP_LEFT, 6, 0);
+
+            /* 数值放大到 20px（纯数字字体，单位已经写在标签里） */
+            s_dt_cell[slot] = ui_label(c, "--", &lv_font_montserrat_20, C_TXT);
+            lv_obj_set_width(s_dt_cell[slot], 140);
+            lv_label_set_long_mode(s_dt_cell[slot], LV_LABEL_LONG_DOT);
+            lv_obj_align(s_dt_cell[slot], LV_ALIGN_BOTTOM_LEFT, 6, -1);
+        }
     }
 
     /* ---- 日K ---- */
-    lv_obj_t *kc = ui_card(s_detail, 456, 230, C_BG_CARD);
-    lv_obj_set_pos(kc, 12, 164);
+    lv_obj_t *kc = ui_card(s_detail, 456, 236, C_BG_CARD);
+    lv_obj_set_pos(kc, 12, 232);
     lv_obj_set_style_pad_all(kc, 0, 0);
 
     s_k_hdr = ui_label(kc, "日K", NULL, C_TXT_DIM);
@@ -2508,17 +2632,27 @@ static void build_detail(lv_obj_t *parent)
     lv_obj_add_event_cb(s_kmsg, kline_pressed_cb, LV_EVENT_PRESSED, NULL);
 
     s_dt_alerts = ui_label(s_detail, "", NULL, 0x5B6B85);
-    lv_obj_set_pos(s_dt_alerts, 14, 396);
+    lv_obj_set_pos(s_dt_alerts, 16, 112);
+    lv_obj_set_width(s_dt_alerts, 320);
+    lv_label_set_long_mode(s_dt_alerts, LV_LABEL_LONG_DOT);
 
-    lv_obj_t *ab = lv_button_create(s_detail);
-    s_dt_alert_btn = ab;
-    lv_obj_set_size(ab, 456, 40);
-    lv_obj_set_pos(ab, 12, 416);
-    lv_obj_set_style_radius(ab, 12, 0);
-    lv_obj_set_style_bg_color(ab, col(0x8A3AB2), 0);
-    lv_obj_add_event_cb(ab, detail_alert_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *abl = ui_label(ab, "价格提醒（可设多条）", &ui_cjk_16, C_TXT);
-    lv_obj_center(abl);
+    /* 价格提醒入口：和主界面一致 —— 右下角紫色悬浮圆钮 + 铃铛图标 */
+    lv_obj_t *bell = lv_button_create(s_detail);
+    s_dt_alert_btn = bell;
+    lv_obj_set_size(bell, 46, 46);
+    lv_obj_set_pos(bell, 480 - 58, 0);
+    lv_obj_set_style_radius(bell, 23, 0);
+    lv_obj_set_style_bg_color(bell, col(0x8A3AB2), 0);
+    lv_obj_set_style_border_width(bell, 0, 0);
+    lv_obj_set_style_shadow_width(bell, 16, 0);
+    lv_obj_set_style_shadow_color(bell, col(0x000000), 0);
+    lv_obj_set_style_shadow_opa(bell, LV_OPA_40, 0);
+    lv_obj_add_event_cb(bell, detail_alert_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *bll = lv_label_create(bell);
+    lv_label_set_text(bll, LV_SYMBOL_BELL);
+    lv_obj_set_style_text_font(bll, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(bll, col(C_TXT), 0);
+    lv_obj_center(bll);
 }
 
 static void kperiod_cb(lv_event_t *e)
@@ -2750,6 +2884,7 @@ static void alist_open(const char *secid)
     }
     strlcpy(s_alist_filter, secid ? secid : "", sizeof(s_alist_filter));
     alist_rebuild();
+    alist_set_mode(0);            /* 每次打开都回到「提醒」，不用记上次页签 */
     lv_obj_remove_flag(s_alist, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_alist);
 }
@@ -2759,6 +2894,273 @@ static void alist_open_all_cb(lv_event_t *e)
 {
     (void)e;
     alist_open("");
+}
+
+/* ================= 资讯（7×24 快讯，挂在铃铛面板里） =================
+ * 数据源：新浪财经 live 接口，必须用 http（https 的 TLS 会吃光内部 RAM）。 */
+#define NEWS_MAX 20
+
+typedef struct {
+    char t[12];          /* MM-DD HH:MM */
+    char txt[200];
+} news_t;
+
+static news_t s_news[NEWS_MAX];
+static int  s_news_cnt;
+static volatile bool s_news_busy;
+static volatile bool s_news_dirty;
+static volatile bool s_news_fail;
+static SemaphoreHandle_t s_news_sem;
+static lv_obj_t *s_news_box;
+static lv_obj_t *s_news_empty;
+static lv_obj_t *s_alist_tab[2];
+static lv_obj_t *s_alist_add;        /* 底部"添加提醒"按钮，资讯页签下隐藏 */
+static int  s_alist_mode;            /* 0=提醒 1=资讯 */
+
+static int news_unescape(char *dst, size_t cap, const char *src, const char *end)
+{
+    size_t o = 0;
+    bool in_tag = false;
+    for (const char *p = src; p < end && o + 2 < cap; p++) {
+        if (*p == '\\' && p + 1 < end) {
+            p++;
+            if (*p == 'u' && p + 5 < end) {
+                char hx[5] = { p[1], p[2], p[3], p[4], 0 };
+                unsigned cp = (unsigned)strtoul(hx, NULL, 16);
+                if (cp < 0x80) {
+                    dst[o++] = (char)cp;
+                } else if (cp < 0x800) {
+                    dst[o++] = (char)(0xC0 | (cp >> 6));
+                    dst[o++] = (char)(0x80 | (cp & 0x3F));
+                } else {
+                    dst[o++] = (char)(0xE0 | (cp >> 12));
+                    dst[o++] = (char)(0x80 | ((cp >> 6) & 0x3F));
+                    dst[o++] = (char)(0x80 | (cp & 0x3F));
+                }
+                p += 4;
+            } else if (*p == 'n' || *p == 'r' || *p == 't') {
+                dst[o++] = ' ';
+            } else {
+                dst[o++] = *p;
+            }
+            continue;
+        }
+        if (*p == '<') {
+            in_tag = true;
+            continue;
+        }
+        if (*p == '>') {
+            in_tag = false;
+            continue;
+        }
+        if (in_tag) {
+            continue;
+        }
+        dst[o++] = *p;
+    }
+    dst[o] = '\0';
+    return (int)o;
+}
+
+static int news_parse(const char *body)
+{
+    int n = 0;
+    const char *p = body;
+    while (n < NEWS_MAX) {
+        const char *t = strstr(p, "\"rich_text\":\"");
+        if (!t) {
+            break;
+        }
+        const char *ts = t + 13;
+        const char *te = ts;
+        while (*te && !(*te == '"' && te[-1] != '\\')) {
+            te++;
+        }
+        if (!*te) {
+            break;
+        }
+        const char *c = strstr(te, "\"create_time\":\"");
+        if (!c || c - te > 1200) {
+            p = te + 1;
+            continue;
+        }
+        const char *cs = c + 15;
+        if (!(cs[4] == '-' && cs[7] == '-' && cs[10] == ' ')) {
+            p = te + 1;
+            continue;
+        }
+        news_unescape(s_news[n].txt, sizeof(s_news[n].txt), ts, te);
+        memcpy(s_news[n].t, cs + 5, 5);
+        s_news[n].t[5] = ' ';
+        memcpy(s_news[n].t + 6, cs + 11, 5);
+        s_news[n].t[11] = '\0';
+        n++;
+        p = te + 1;
+    }
+    return n;
+}
+
+static void news_rebuild(void)
+{
+    if (!s_news_box) {
+        return;
+    }
+    lv_obj_clean(s_news_box);
+    if (s_news_cnt <= 0) {
+        if (s_news_empty) {
+            lv_label_set_text(s_news_empty, s_news_fail ? "快讯获取失败，点右上角刷新"
+                                                        : "快讯加载中…");
+            lv_obj_remove_flag(s_news_empty, LV_OBJ_FLAG_HIDDEN);
+        }
+        return;
+    }
+    if (s_news_empty) {
+        lv_obj_add_flag(s_news_empty, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    int y = 0;
+    for (int i = 0; i < s_news_cnt; i++) {
+        lv_obj_t *card = lv_obj_create(s_news_box);
+        lv_obj_set_width(card, 456);
+        lv_obj_set_height(card, LV_SIZE_CONTENT);
+        lv_obj_set_pos(card, 0, y);
+        lv_obj_set_style_radius(card, 10, 0);
+        lv_obj_set_style_bg_color(card, col(C_BG_CARD), 0);
+        lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(card, 0, 0);
+        lv_obj_set_style_pad_all(card, 8, 0);
+        lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t *tm = ui_label(card, s_news[i].t, &lv_font_montserrat_14, 0x22D3EE);
+        lv_obj_set_pos(tm, 0, 0);
+
+        lv_obj_t *tx = ui_label(card, ui_font_safe(s_news[i].txt, &ui_cjk_16), &ui_cjk_16, 0xCFDAEA);
+        lv_obj_set_width(tx, 440);
+        lv_obj_set_pos(tx, 0, 20);
+        lv_label_set_long_mode(tx, LV_LABEL_LONG_WRAP);
+
+        lv_obj_update_layout(card);
+        y += lv_obj_get_height(card) + 8;
+    }
+}
+
+static void news_fetch_task(void *arg)
+{
+    (void)arg;
+    char *body = heap_caps_malloc(40000, MALLOC_CAP_SPIRAM);
+    if (!body) {
+        body = heap_caps_malloc(40000, MALLOC_CAP_DEFAULT);
+    }
+    while (1) {
+        if (xSemaphoreTake(s_news_sem, portMAX_DELAY) != pdTRUE) {
+            continue;
+        }
+        if (!body || wifi_mgr_get_state() != WIFI_MGR_CONNECTED) {
+            s_news_fail = true;
+            s_news_dirty = true;
+            s_news_busy = false;
+            continue;
+        }
+        int total = kline_http_get(
+            "http://zhibo.sina.com.cn/api/zhibo/feed?page=1&page_size=20"
+            "&zhibo_id=152&tag_id=0&dire=f&dpc=1", body, 40000);
+        int got = (total > 0) ? news_parse(body) : 0;
+        ESP_LOGI(TAG, "news: bytes=%d items=%d", total, got);
+        if (got > 0) {
+            s_news_cnt = got;
+            s_news_fail = false;
+        } else {
+            s_news_fail = true;
+        }
+        s_news_dirty = true;
+        s_news_busy = false;
+    }
+}
+
+static void news_fetch_start(void)
+{
+    if (!s_news_sem) {
+        s_news_sem = xSemaphoreCreateBinary();
+    }
+    static bool task_started;
+    if (s_news_sem && !task_started) {
+        if (xTaskCreate(news_fetch_task, "stock_news", 8192, NULL, 2, NULL) == pdPASS) {
+            task_started = true;
+        }
+    }
+    if (s_news_sem && !s_news_busy) {
+        s_news_busy = true;
+        s_news_fail = false;
+        xSemaphoreGive(s_news_sem);
+    }
+}
+
+static void news_refresh_cb(lv_event_t *e)
+{
+    (void)e;
+    static int64_t last_ms;
+    int64_t now = esp_timer_get_time() / 1000;
+    if (last_ms > 0 && now - last_ms < 20000) {
+        ui_shell_toast("刚刷新过，稍等几秒");
+        return;
+    }
+    last_ms = now;
+    news_fetch_start();
+    ui_shell_toast("正在刷新快讯…");
+}
+
+static void alist_set_mode(int mode)
+{
+    s_alist_mode = mode;
+    if (s_alist_box) {
+        if (mode == 0) {
+            lv_obj_remove_flag(s_alist_box, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_alist_box, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (s_alist_empty) {
+        if (mode == 0) {
+            lv_obj_remove_flag(s_alist_empty, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_alist_empty, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (s_news_box) {
+        if (mode == 1) {
+            lv_obj_remove_flag(s_news_box, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_news_box, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    for (int i = 0; i < 2; i++) {
+        if (!s_alist_tab[i]) {
+            continue;
+        }
+        bool on = (i == mode);
+        lv_obj_set_style_bg_color(s_alist_tab[i], col(on ? 0x1B3358 : 0x0E1C30), 0);
+        lv_obj_set_style_bg_opa(s_alist_tab[i], LV_OPA_COVER, 0);
+        lv_obj_t *l = lv_obj_get_child(s_alist_tab[i], 0);
+        if (l) {
+            lv_obj_set_style_text_color(l, col(on ? 0xE6EDF7 : 0x6B7F9E), 0);
+        }
+    }
+    if (s_alist_add) {
+        if (mode == 0) {
+            lv_obj_remove_flag(s_alist_add, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_alist_add, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (mode == 1) {
+        news_fetch_start();        /* 第一次切到资讯才起任务 */
+        news_rebuild();
+    }
+}
+
+static void alist_tab_cb(lv_event_t *e)
+{
+    alist_set_mode((int)(intptr_t)lv_event_get_user_data(e));
 }
 
 static void build_alert_list(lv_obj_t *parent)
@@ -2774,8 +3176,19 @@ static void build_alert_list(lv_obj_t *parent)
     lv_obj_clear_flag(s_alist, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(s_alist, LV_OBJ_FLAG_HIDDEN);
 
-    lv_obj_t *t = ui_label(s_alist, "提醒列表", &ui_cjk_16, C_TXT);
-    lv_obj_set_pos(t, 16, 12);
+    /* 顶部两个切换：提醒 / 资讯 */
+    static const char *tn[2] = { "提醒", "资讯" };
+    for (int i = 0; i < 2; i++) {
+        lv_obj_t *b = lv_button_create(s_alist);
+        lv_obj_set_size(b, 72, 30);
+        lv_obj_set_pos(b, 12 + i * 78, 8);
+        lv_obj_set_style_radius(b, 15, 0);
+        lv_obj_set_style_pad_all(b, 0, 0);
+        lv_obj_add_event_cb(b, alist_tab_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
+        lv_obj_t *l = ui_label(b, tn[i], &ui_cjk_16, 0x6B7F9E);
+        lv_obj_center(l);
+        s_alist_tab[i] = b;
+    }
 
     lv_obj_t *close = lv_button_create(s_alist);
     lv_obj_set_size(close, 76, 32);
@@ -2802,13 +3215,30 @@ static void build_alert_list(lv_obj_t *parent)
     lv_obj_set_width(s_alist_empty, 440);
     lv_obj_align(s_alist_empty, LV_ALIGN_TOP_MID, 0, 190);
 
-    lv_obj_t *add = lv_button_create(s_alist);
-    lv_obj_set_size(add, 456, 46);
-    lv_obj_set_pos(add, 12, 428);
-    lv_obj_set_style_radius(add, 12, 0);
-    lv_obj_set_style_bg_color(add, col(0x8A3AB2), 0);
-    lv_obj_add_event_cb(add, alist_add_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *al = ui_label(add, "添加提醒", &ui_cjk_16, C_TXT);
+    /* 资讯页签的容器与空提示 */
+    s_news_box = lv_obj_create(s_alist);
+    lv_obj_set_size(s_news_box, 464, 372);
+    lv_obj_set_pos(s_news_box, 8, 46);
+    lv_obj_set_style_bg_opa(s_news_box, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(s_news_box, 0, 0);
+    lv_obj_set_style_pad_all(s_news_box, 0, 0);
+    lv_obj_set_scroll_dir(s_news_box, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(s_news_box, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_add_flag(s_news_box, LV_OBJ_FLAG_HIDDEN);
+
+    s_news_empty = ui_label(s_alist, "快讯加载中…", NULL, 0x5B6B85);
+    lv_obj_set_style_text_align(s_news_empty, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_width(s_news_empty, 440);
+    lv_obj_align(s_news_empty, LV_ALIGN_TOP_MID, 0, 190);
+    lv_obj_add_flag(s_news_empty, LV_OBJ_FLAG_HIDDEN);
+
+    s_alist_add = lv_button_create(s_alist);
+    lv_obj_set_size(s_alist_add, 456, 46);
+    lv_obj_set_pos(s_alist_add, 12, 428);
+    lv_obj_set_style_radius(s_alist_add, 12, 0);
+    lv_obj_set_style_bg_color(s_alist_add, col(0x8A3AB2), 0);
+    lv_obj_add_event_cb(s_alist_add, alist_add_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *al = ui_label(s_alist_add, "添加提醒", &ui_cjk_16, C_TXT);
     lv_obj_center(al);
 }
 
@@ -3101,6 +3531,10 @@ static void add_ok_cb(lv_event_t *e)
         ui_shell_toast("A 股请输入 6 位代码");
         return;
     }
+    if (s_mkt == MKT_HK && (strlen(code) < 1 || strlen(code) > 5)) {
+        ui_shell_toast("港股请输入 5 位代码（可省略前导 0）");
+        return;
+    }
     char secid[16];
     code_to_secid(code, secid, sizeof(secid));
 
@@ -3288,6 +3722,11 @@ static void reset_ui_refs(void)
 }
 
 /* ================= 市场切换（A 股 / 美股） ================= */
+static const char *mkt_tag(void)
+{
+    return s_mkt == MKT_A ? "A" : (s_mkt == MKT_HK ? "HK" : "US");
+}
+
 static void mkt_load(void)
 {
     nvs_handle_t h;
@@ -3298,7 +3737,7 @@ static void mkt_load(void)
         }
         nvs_close(h);
     }
-    s_mkt = (v == 1) ? MKT_US : MKT_A;
+    s_mkt = (v == 1) ? MKT_US : (v == 2) ? MKT_HK : MKT_A;
 }
 
 static void mkt_save(void)
@@ -3330,7 +3769,7 @@ static void mkt_switch_cb(lv_event_t *e)
     idx_load();
     rebuild_idx();
     rebuild_list();
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
         if (!s_mkt_btn[i]) {
             continue;
         }
@@ -3340,8 +3779,9 @@ static void mkt_switch_cb(lv_event_t *e)
     }
     s_last_poll_ms = 0;
     fetch_now();
-    ui_shell_toast(m == MKT_A ? "已切换到 A 股" : "已切换到美股");
-    ESP_LOGI(TAG, "market switched to %s", m == MKT_A ? "A" : "US");
+    ui_shell_toast(m == MKT_A ? "已切换到 A 股"
+                   : (m == MKT_HK ? "已切换到港股" : "已切换到美股"));
+    ESP_LOGI(TAG, "market switched to %s", mkt_tag());
 }
 
 static void create(lv_obj_t *parent)
@@ -3371,18 +3811,19 @@ static void create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_lbl_status, col(0x8FA8CC), 0);
     lv_obj_align(s_lbl_status, LV_ALIGN_TOP_LEFT, 2, 3);
 
-    /* 右上角：A股 / 美股 切换 */
-    for (int i = 0; i < 2; i++) {
+    /* 右上角：A股 / 美股 / 港股 切换 */
+    /* 单字按钮：A / 美 / 港。必须用中文字体，montserrat 没有汉字会画成方框 */
+    static const char *mt[3] = { "A", "美", "港" };
+    for (int i = 0; i < 3; i++) {
         lv_obj_t *b = lv_button_create(clk);
-        lv_obj_set_size(b, 36, 22);
-        lv_obj_align(b, LV_ALIGN_TOP_RIGHT, i ? -1 : -39, 1);
+        lv_obj_set_size(b, 30, 22);
+        lv_obj_align(b, LV_ALIGN_TOP_RIGHT, -1 - (2 - i) * 32, 1);
         lv_obj_set_style_radius(b, 8, 0);
         lv_obj_set_style_pad_all(b, 0, 0);
         lv_obj_set_style_bg_color(b, col(i == (int)s_mkt ? 0x8A3AB2 : 0x16203A), 0);
         lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
         lv_obj_add_event_cb(b, mkt_switch_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
-        lv_obj_t *l = ui_label(b, i ? "美股" : "A股", &ui_cjk_16,
-                               i == (int)s_mkt ? C_TXT : 0x6B7F9E);
+        lv_obj_t *l = ui_label(b, mt[i], &ui_cjk_16, i == (int)s_mkt ? C_TXT : 0x6B7F9E);
         lv_obj_center(l);
         s_mkt_btn[i] = b;
     }
@@ -3534,6 +3975,13 @@ static void tick(void)
     }
 
     /* 提醒增删/命中：抓取任务只置标志，这里在 LVGL 线程里刷 */
+    if (s_news_dirty) {
+        s_news_dirty = false;
+        if (s_alist_mode == 1 && s_alist && !lv_obj_is_hidden(s_alist)) {
+            news_rebuild();
+        }
+    }
+
     if (s_alert_ui_dirty) {
         s_alert_ui_dirty = false;
         if (s_alist && !lv_obj_has_flag(s_alist, LV_OBJ_FLAG_HIDDEN)) {

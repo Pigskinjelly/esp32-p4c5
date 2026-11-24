@@ -89,6 +89,7 @@ static lv_obj_t *s_cc_ap_list;
 static lv_obj_t *s_cc_brightness;
 static lv_obj_t *s_cc_bright_val;   /* 亮度数值 */
 static lv_obj_t *s_cc_bt_sw;        /* 蓝牙开关 */
+static bt_state_t s_bt_prev = BT_STATE_OFF;   /* 上一帧蓝牙状态，用于只提示一次 */
 static lv_obj_t *s_cc_rf_sw;        /* WiFi 射频开关（与 WiFi 卡同步） */
 static lv_obj_t *s_scan_modal;      /* 扫描 WiFi 弹窗 */
 static bool s_wifi_dirty = true;
@@ -1148,25 +1149,43 @@ static void scan_open_cb(lv_event_t *e)
     }
 }
 
+/* 蓝牙起停是异步的：这里只投递请求，结果由 cc_refresh() 轮询状态后提示。
+ * 同步跑整栈初始化会把 LVGL 任务冻住，严重时触发任务看门狗重启。 */
 static void bt_switch_cb(lv_event_t *e)
 {
+    esp_err_t err = ESP_OK;
+
     if (s_sw_sync) {
         return;
     }
     lv_obj_t *sw = lv_event_get_target(e);
     bool on = lv_obj_has_state(sw, LV_STATE_CHECKED);
-    if (bt_mgr_set(on) != ESP_OK) {
-        ui_shell_toast("蓝牙切换失败");
-        s_sw_sync = true;
-        if (on) {
-            lv_obj_clear_state(sw, LV_STATE_CHECKED);
-        } else {
-            lv_obj_add_state(sw, LV_STATE_CHECKED);
-        }
-        s_sw_sync = false;
-        return;
+
+    if (!bt_mgr_available()) {
+        ui_shell_toast("固件未编译蓝牙");
+        goto rollback;
     }
-    ui_shell_toast(on ? "蓝牙已开启" : "蓝牙已关闭");
+
+    err = bt_mgr_set(on);
+    if (err == ESP_ERR_INVALID_STATE) {
+        ui_shell_toast("正在切换中，请稍候");
+        goto rollback;
+    }
+    if (err != ESP_OK) {
+        ui_shell_toast(err == ESP_ERR_NO_MEM ? "资源不足，蓝牙未开启" : "蓝牙切换失败");
+        goto rollback;
+    }
+    ui_shell_toast(on ? "正在开启蓝牙…" : "正在关闭蓝牙…");
+    return;
+
+rollback:
+    s_sw_sync = true;
+    if (on) {
+        lv_obj_clear_state(sw, LV_STATE_CHECKED);
+    } else {
+        lv_obj_add_state(sw, LV_STATE_CHECKED);
+    }
+    s_sw_sync = false;
 }
 
 /* 扫描弹窗：附近 WiFi 列表 */
@@ -1311,7 +1330,7 @@ static void build_control_center(void)
     lv_obj_t *bc = cc_card(s_cc, 256, 72);
     lv_obj_t *bt = ui_label(bc, "蓝牙 ESP32-P4C5", &ui_cjk_24, C_TXT);
     lv_obj_set_pos(bt, 16, 18);
-    s_cc_bt_sw = cc_switch(bc, 368, 21, bt_mgr_is_on(), bt_switch_cb);
+    s_cc_bt_sw = cc_switch(bc, 368, 21, bt_mgr_state() == BT_STATE_ON, bt_switch_cb);
 
     /* ---- WiFi 射频卡片 ---- */
     lv_obj_t *rc = cc_card(s_cc, 340, 72);
@@ -1467,16 +1486,31 @@ static void cc_refresh(void)
         }
     }
     if (s_cc_bt_sw) {
+        bt_state_t bs = bt_mgr_state();
+        /* 中间态也显示为「开」，否则用户点了开关又自己弹回去，会以为没点上 */
+        bool want = (bs == BT_STATE_ON || bs == BT_STATE_STARTING);
         bool cur = lv_obj_has_state(s_cc_bt_sw, LV_STATE_CHECKED);
-        bool on = bt_mgr_is_on();
-        if (cur != on) {
+        if (cur != want) {
             s_sw_sync = true;
-            if (on) {
+            if (want) {
                 lv_obj_add_state(s_cc_bt_sw, LV_STATE_CHECKED);
             } else {
                 lv_obj_clear_state(s_cc_bt_sw, LV_STATE_CHECKED);
             }
             s_sw_sync = false;
+        }
+        /* 状态真正落定后再提示一次，中间态不打扰 */
+        if (bs != s_bt_prev) {
+            if (bs == BT_STATE_ON) {
+                ui_shell_toast("蓝牙已开启");
+            } else if (bs == BT_STATE_OFF && s_bt_prev == BT_STATE_STOPPING) {
+                ui_shell_toast("蓝牙已关闭");
+            } else if (bs == BT_STATE_ERROR) {
+                char b[72];
+                snprintf(b, sizeof(b), "蓝牙开启失败（%s）", bt_mgr_last_error_str());
+                ui_shell_toast(b);
+            }
+            s_bt_prev = bs;
         }
     }
 
@@ -1713,6 +1747,14 @@ static void shell_timer_cb(lv_timer_t *t)
         /* App 内可能新建了控件，定期补上事件冒泡（手势依赖） */
         if (s_app_active >= 0) {
             enable_bubble_recursive(s_app_container[s_app_active]);
+        }
+        /* 蓝牙起停在 worker 里异步跑：中间态期间持续刷新控制中心，
+         * 状态落定那一帧再刷一次，好把开关位置和「已开启/失败」提示补上 */
+        if (s_cc && !lv_obj_is_hidden(s_cc)) {
+            bt_state_t bs = bt_mgr_state();
+            if (bs != s_bt_prev || bs == BT_STATE_STARTING || bs == BT_STATE_STOPPING) {
+                cc_refresh();
+            }
         }
         if (s_tick_cb) {
             s_tick_cb();
